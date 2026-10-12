@@ -138,8 +138,11 @@ All of them are for functions of this unit.
 
 ## Verification
 
-`tools/check.sh` (all scenarios) reports no mismatch.
-* 42 functions of the unit are verified directly.
+`tools/check.sh` (all scenarios, after merging master with one scenario per level)
+reports no mismatch.
+* 46 functions of the unit are verified directly.
+* A quit scenario (cmd-q) verified `seg11_03ec02`, `FUN_0004084c`, `FUN_0003dbc2` and
+  `MDH_EndSong`.
 * Extra runs verified more functions individually:
   * `POP2_NATIVE_EXCLUDE` of the callers, so the callees are entered from 68k code.
   * `POP2_NATIVE_ONLY` = this unit, so the calls from other ported units are not nested
