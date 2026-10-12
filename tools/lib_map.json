@@ -1,0 +1,4951 @@
+[
+ {
+  "entry": 65552,
+  "old_name": "seg1_010010",
+  "name": "tc__start",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "THINK C application entry (JT entry 0). clr.w 0xA4A; A6=0; D6='STRS'; tc__load_STRS (string-literal block, base in A4, stored at 0x10004); tc__init_globals (DATA/ZERO/DREL); tc__install_trap_patches (LoadSeg/ExitToShell); tc__call_STI (C++ static ctors); calls main via JT with argc=1 and argv/envp pointers built on the stack; after main returns: A5=CurrentA5, jsr 0x6C(A5) exit hook, ExitToShell. Never returns."
+ },
+ {
+  "entry": 65624,
+  "old_name": "FUN_00010058",
+  "name": "tc__call_STI",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "If the JT offset stored at 0x1000C is non-zero, jsr through it (A5+offset) to tc__run_STI (C++ static constructors). No args."
+ },
+ {
+  "entry": 65636,
+  "old_name": "FUN_00010064",
+  "name": "tc__LoadSeg_reloc_patch",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Head of the _LoadSeg (A9F0) patch: saves D0-D7/A0-A4, D7=segment number (word at 0x3C(SP), the LoadSeg argument), sets byte 0xA5E; GetResource('CODE',seg); if bit7 of first code byte is set (clears it = relocate once): saves handle state (tc__save_handle_state), HLock, GetResource('CREL',seg), tc__restore_handle_state, tc__relocate with A2=segment base. Missing resource -> SysError(15). Returns into the patch block which then jumps to the original LoadSeg."
+ },
+ {
+  "entry": 65716,
+  "old_name": "FUN_000100b4",
+  "name": "tc__init_globals",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Initialises the A5 globals area: A1=(CurStackBase 0x908) .. A5. Copies words from 'DATA' 0 into the globals; whenever a copied word is 0, reads a count word N from 'ZERO' 0 and additionally writes N zero bytes. Releases DATA and ZERO, GetResource('DREL',0) and falls through into tc__relocate with A2=A5."
+ },
+ {
+  "entry": 65792,
+  "old_name": "FUN_00010100",
+  "name": "tc__relocate",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Register args: A0=relocation resource handle (DREL/CREL), A2=base. For each 16-bit word w in the handle (GetHandleSize/2 words): if bit0 set (cleared) add the STRS base (long at 0x10004) else add A5 to the long at A2+(signed)w. ReleaseResource(A0). Clobbers D0-D2,A0."
+ },
+ {
+  "entry": 65828,
+  "old_name": "FUN_00010124",
+  "name": "tc__save_handle_state",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "D3.b = HGetState(A3) (on 64K ROM, ROM85<0: D3.b = master-pointer high byte *A3). A0=A3."
+ },
+ {
+  "entry": 65846,
+  "old_name": "FUN_00010136",
+  "name": "tc__restore_handle_state",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "HSetState(A3, D3.b) (on 64K ROM: *A3 = D3.b)."
+ },
+ {
+  "entry": 65864,
+  "old_name": "seg1_010148",
+  "name": "tc__switch_word_list",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Switch helper (jsr, never returns normally). D0.w = selector. Inline table after the jsr: word N-1, then N entries {word offset, word value}. Scans entries with dbeq comparing value with D0.w; on match (or when exhausted, the last entry is used = default) jumps to (address of that entry's offset word)+offset. If the chosen offset is 0 it loops forever (beq to itself). Clobbers D1,D2,A0. Not referenced by game code."
+ },
+ {
+  "entry": 65884,
+  "old_name": "seg1_01015c",
+  "name": "tc__switch_long_list",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Like tc__switch_word_list but D0.l is compared against 32-bit values: table = word N-1, then N entries {word offset, long value}; target = entry address + offset; offset 0 -> infinite loop. Not referenced by game code."
+ },
+ {
+  "entry": 65904,
+  "old_name": "seg1_010170",
+  "name": "tc__switch_range",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Dense switch helper. D0.w = selector. Inline table: word lo, word hi, word default_off, word off[lo..hi]. If D0>hi or D0<lo (signed) uses default_off else off[D0-lo]; jumps to (address of the chosen word)+offset; offset 0 -> infinite loop. Not referenced by game code."
+ },
+ {
+  "entry": 65932,
+  "old_name": "seg1_01018c",
+  "name": "tc_lmul",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "long a"
+   ],
+   [
+    8,
+    4,
+    "long b"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "32x32->32 multiply (low 32 bits, sign-agnostic). Args in C order (a at 4(SP), b at 8(SP)) but CALLEE pops 8 bytes. D0=a*b. Preserves D1-D7 (D1 saved in the arg slot). Called via JT 0x42(A5)."
+ },
+ {
+  "entry": 65986,
+  "old_name": "seg1_0101c2",
+  "name": "tc_uldiv",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "ulong dividend"
+   ],
+   [
+    8,
+    4,
+    "ulong divisor"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Unsigned 32/32 divide, D0 = dividend/divisor (4(SP)=dividend, 8(SP)=divisor), callee pops 8. Preserves D1-D7. Divisor 0 -> divu zero-divide exception. JT 0x4A(A5)."
+ },
+ {
+  "entry": 66018,
+  "old_name": "seg1_0101e2",
+  "name": "tc_ulmod",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "ulong dividend"
+   ],
+   [
+    8,
+    4,
+    "ulong divisor"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Unsigned 32-bit remainder, D0 = dividend % divisor, callee pops 8, preserves D1-D7. JT 0x52(A5)."
+ },
+ {
+  "entry": 66052,
+  "old_name": "seg1_010204",
+  "name": "tc_ldiv",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "long dividend"
+   ],
+   [
+    8,
+    4,
+    "long divisor"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Signed 32/32 divide truncating toward zero, D0=quotient, callee pops 8, preserves D1-D7. JT 0x5A(A5)."
+ },
+ {
+  "entry": 66084,
+  "old_name": "seg1_010224",
+  "name": "tc_lmod",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "long dividend"
+   ],
+   [
+    8,
+    4,
+    "long divisor"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Signed remainder (sign of dividend, C99 semantics), callee pops 8, preserves D1-D7. JT 0x62(A5)."
+ },
+ {
+  "entry": 66118,
+  "old_name": "FUN_00010246",
+  "name": "tc__ldivmod_regs",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0:D1",
+  "semantics": "Register signed divmod: in D0=dividend, D1=divisor; out D0=quotient (trunc toward 0), D1=remainder (sign of dividend). Clobbers D2,D3,D7."
+ },
+ {
+  "entry": 66164,
+  "old_name": "FUN_00010274",
+  "name": "tc__uldivmod_regs",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0:D1",
+  "semantics": "Register unsigned divmod: in D0=dividend, D1=divisor; out D0=quotient, D1=remainder. Clobbers D2,D3,D7 (D7=0xFFFF). Divisor>dividend -> D0=0,D1=dividend."
+ },
+ {
+  "entry": 66270,
+  "old_name": "FUN_000102de",
+  "name": "tc__load_STRS",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Loads resource type D6 ('STRS', the string-literal/A4 data) id 0 and, if larger than one resource, continuation ids (each 0x7FFE bytes) into one block: single part -> ReserveMem, LoadResource, DetachResource, HLock; multi-part -> NewPtr + BlockMove of each part. A4 = data base. Sets byte 0xA5E. D0=1 ok, 0 on failure. (Trailing code at 0x103A0 disposes the block.)"
+ },
+ {
+  "entry": 66478,
+  "old_name": "FUN_000103ae",
+  "name": "tc__install_trap_patches",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "NewPtr(0x18) (NewPtrSys on 64K ROM) stored at 0x68(A5); patches _LoadSeg (A9F0) with stub {jsr tc__LoadSeg_reloc_patch; jmp oldLoadSeg} and _ExitToShell (A9F4) with {jsr 0x1004C (A5=CurrentA5; jsr 0x6C(A5)); jmp oldExitToShell}."
+ },
+ {
+  "entry": 66564,
+  "old_name": "seg1_010404",
+  "name": "tc__remove_trap_patches",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Default 0x6C(A5) exit hook: restores original LoadSeg/ExitToShell addresses saved in the 0x68(A5) block and DisposePtr's it."
+ },
+ {
+  "entry": 353220,
+  "old_name": "seg19_0563c4",
+  "name": "tc_malloc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "ulong size"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "THINK C malloc. size<15000: tc__malloc_small((short)size) from 15008-byte pools (block = 2-byte header ~blocksize + data, blocksize=(size+3)&~1). size>0x800000 -> NULL. Else NewPtr(size+2) (not cleared), header word 0xFFFF, returns ptr+2 (NULL if NewPtr fails). Memory is NOT zeroed."
+ },
+ {
+  "entry": 353280,
+  "old_name": "FUN_00056400",
+  "name": "tc_calloc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "ulong nmemb"
+   ],
+   [
+    8,
+    4,
+    "ulong size"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "calloc: size>8MB -> NULL; size rounded up to even; total=nmemb*size (tc_lmul); total>8MB -> NULL; total<15000: tc__malloc_small + memset 0; else NewPtrClear(total+2) with 0xFFFF header. Unused by game."
+ },
+ {
+  "entry": 353408,
+  "old_name": "FUN_00056480",
+  "name": "tc_realloc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* p"
+   ],
+   [
+    8,
+    4,
+    "ulong size"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "realloc: size>8MB -> NULL; p==NULL -> malloc(size); size==0 -> free(p), NULL. size rounded to even. Shrinks/grows small blocks in place when possible (merging following free blocks), large blocks via SetPtrSize; otherwise malloc+BlockMove(min(old,new))+free. Old size of small block = (~header)-2, of large = GetPtrSize-2. Unused by game."
+ },
+ {
+  "entry": 353670,
+  "old_name": "FUN_00056586",
+  "name": "tc_free",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* p"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "free: NULL ignored. header=~header at p-2: if it becomes 0 (was 0xFFFF, NewPtr block) DisposePtr(p-2), else the small block is now marked free (positive size); pools are never released."
+ },
+ {
+  "entry": 353692,
+  "old_name": "FUN_0005659c",
+  "name": "tc__malloc_small",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    2,
+    "ushort size"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Small-block allocator: need=(size+3)&~1. Walks current pool (A5-0x1872) from rover (A5-0x186E) coalescing adjacent free blocks (header>0 = free size, header<0 = ~size allocated, -1 = pool end marker followed by next-pool link); first fit; splits; header=~need; returns block+2. When no pool fits, NewPtr(0x3AA0) new pool (circular list head A5-0x1876, last A5-0x187A). Returns 0 on failure."
+ },
+ {
+  "entry": 353872,
+  "old_name": "FUN_00056650",
+  "name": "tc_atexit",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void (*fn)(void)"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "atexit: table of 34 entries x 6 bytes {fn, word flag} at A5-0x1862, count A5-0x186A; if count>33 return -1. Stores fn at entry[count++]. First time: saves the current 0x6C(A5) exit hook in A5-0x1796 and sets 0x6C(A5)=JT 0x13F2 (tc__exit_hook_all). Returns 0."
+ },
+ {
+  "entry": 353954,
+  "old_name": "seg19_0566a2",
+  "name": "tc__atexit",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void (*fn)(void)"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "THINK C _atexit: like atexit but sets entry flag=1 so fn also runs when the app quits via ExitToShell; first time patches ExitToShell (A9F4) -> tc__ExitToShell_patch (original saved A5-0x1792; on 64K ROM via a 6-byte jmp stub at A5-0x178E). Returns 0 / -1 if full. Called by MohawkInit."
+ },
+ {
+  "entry": 354088,
+  "old_name": "FUN_00056728",
+  "name": "tc__atexit_slot1",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void (*fn)(void)"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Temporarily sets the atexit count to 1, calls tc_atexit(fn) (stores into fixed slot 1), restores count. Used to register tc__stdio_exit_cleanup."
+ },
+ {
+  "entry": 354124,
+  "old_name": "FUN_0005674c",
+  "name": "tc__atexit_slot0",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void (*fn)(void)"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Temporarily sets the atexit count to 0, calls tc__atexit(fn) (fixed slot 0, runs also on ExitToShell), restores count. Used to register tc__close_all_files."
+ },
+ {
+  "entry": 354158,
+  "old_name": "seg19_05676e",
+  "name": "tc_exit",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long status"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "exit(status): status ignored; jsr through 0x6C(A5) hook (runs atexit handlers, restores traps) then ExitToShell. Never returns. Called by Terminate."
+ },
+ {
+  "entry": 354174,
+  "old_name": "FUN_0005677e",
+  "name": "tc__exit",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long status"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "_exit: ExitToShell directly (patched ExitToShell still runs _atexit handlers). Used by raise() for SIG_DFL."
+ },
+ {
+  "entry": 354184,
+  "old_name": "seg19_056788",
+  "name": "tc__exit_hook_all",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Exit hook installed in 0x6C(A5) by atexit: tc__run_exit_handlers(1)."
+ },
+ {
+  "entry": 354196,
+  "old_name": "seg19_056794",
+  "name": "tc__ExitToShell_patch",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "ExitToShell patch installed by _atexit: tc__run_exit_handlers(0) (which restores the real ExitToShell) then ExitToShell."
+ },
+ {
+  "entry": 354208,
+  "old_name": "FUN_000567a0",
+  "name": "tc__run_exit_handlers",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long all"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Runs exit handlers slots 33..0 with A5 = saved A5 (tc__get_saved_A5): each non-NULL slot is cleared and called if all!=0 or its flag word!=0. all==0 also sets A5-0x1866=1 (console proc then does nothing). Disposes ExitToShell stub, restores original ExitToShell, then calls saved previous hook (A5-0x1796) or 0x6C(A5), and sets A5-0x1796 = tc__exit_nop."
+ },
+ {
+  "entry": 354356,
+  "old_name": "seg19_056834",
+  "name": "tc__exit_nop",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Empty function (rts); placeholder exit hook."
+ },
+ {
+  "entry": 354358,
+  "old_name": "FUN_00056836",
+  "name": "tc__A5_storage_addr",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "A1",
+  "semantics": "Returns in A1 the address (0x56838) of a 4-byte A5 save slot embedded in the code segment (bsr trick)."
+ },
+ {
+  "entry": 354364,
+  "old_name": "FUN_0005683c",
+  "name": "tc__pop_A1",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "A1",
+  "semantics": "Internal: movea.l (SP)+,A1; rts (helper of tc__A5_storage_addr)."
+ },
+ {
+  "entry": 354368,
+  "old_name": "FUN_00056840",
+  "name": "tc__save_A5",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Stores A5 into the code-segment slot at 0x56838 (clobbers A1)."
+ },
+ {
+  "entry": 354376,
+  "old_name": "FUN_00056848",
+  "name": "tc__get_saved_A5",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "D0 = A5 value saved at 0x56838 (clobbers A1)."
+ },
+ {
+  "entry": 354384,
+  "old_name": "seg19_056850",
+  "name": "tc_atoi",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "atoi: sscanf(s, fmt@A5-0x178A (initialised-data string, presumably \"%d\"), &v); returns 32-bit v, or 0 if sscanf<=0. Leading isspace skipped, optional sign, decimal; overflow clamps to LONG_MAX/LONG_MIN (errno=34). Called by midi code."
+ },
+ {
+  "entry": 354424,
+  "old_name": "FUN_00056878",
+  "name": "tc_atol",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "atol(s) = strtol(s, NULL, 10). Unused by game."
+ },
+ {
+  "entry": 354446,
+  "old_name": "seg19_05688e",
+  "name": "tc_strtol",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "char** endp"
+   ],
+   [
+    12,
+    4,
+    "long base"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "strtol via sscanf(s, fmt@A5-0x1786, base, &val, &n) (THINK '?' flag takes the base from the arg list, '%n' gives chars consumed). On no conversion val=n=0. If endp: *endp=s+n (s if nothing parsed). Skips isspace, sign, base 0 => auto 0x/0 prefix, base 16 accepts 0x; overflow -> LONG_MAX/LONG_MIN, errno(A5-0x155E)=34. Called by GetEditTextNumericValue."
+ },
+ {
+  "entry": 354518,
+  "old_name": "FUN_000568d6",
+  "name": "tc_strtoul",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "char** endp"
+   ],
+   [
+    12,
+    4,
+    "long base"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "strtoul, same scheme with fmt@A5-0x177E (unsigned conversion). Per decompiled scanf engine a '-' with nonzero value yields 0 and errno=34 (unverified). Unused by game."
+ },
+ {
+  "entry": 354590,
+  "old_name": "FUN_0005691e",
+  "name": "tc__filbuf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "getc slow path: fp->cnt(0x14)=0; tc__checkfp; if ungetc pushback active (byte1 bit7): restore saved buffer (cnt=saved 0x0C, pos+=cnt, ptr=buf) else tc__stdio_prep_buffer + proc(fp,0) (fill), error -> -1. Then cnt--, returns *ptr++ (0..255)."
+ },
+ {
+  "entry": 354688,
+  "old_name": "FUN_00056980",
+  "name": "tc__flsbuf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ],
+   [
+    8,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "putc slow path: if not yet writing (flag bit3): checkfp, append mode -> pos=EOF(0x1C), prep buffer, line-buffered(0x20!=0) -> cnt=1, set bit3. Stores (char)c, flushes when buffer full or (line-buffered and c<' ' and...) per code; returns (unsigned char)c or -1 on flush error."
+ },
+ {
+  "entry": 354852,
+  "old_name": "FUN_00056a24",
+  "name": "tc__stdio_prep_buffer",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "ptr=buf, cnt=bufsize; if refnum(0x06)>0 and bufsize>1: cnt -= pos % bufsize (align window); pos(0x18) += cnt."
+ },
+ {
+  "entry": 354918,
+  "old_name": "FUN_00056a66",
+  "name": "tc__stdio_flush_buffer",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "pos -= cnt; if dirty (bit3): cnt=ptr-buf, ptr=buf, clear bit3, result=proc(fp,1) (write). Then tc__stdio_reset_buffer. Returns proc result (0 ok)."
+ },
+ {
+  "entry": 354996,
+  "old_name": "FUN_00056ab4",
+  "name": "tc__stdio_reset_buffer",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "ptr=buf+bufsize, cnt=0, clear pushback flag (byte1 bit7)."
+ },
+ {
+  "entry": 355050,
+  "old_name": "FUN_00056aea",
+  "name": "tc_freopenc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* from"
+   ],
+   [
+    8,
+    4,
+    "void* to"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "THINK C console: makes stream `to` a console stream (sharing from's window if from!=NULL, else creates a console window via tc__console_new_window; on first use initialises the Toolbox if byte 0x8F2 set). fclose(to) first, refnum=-1, 512-byte buffer, proc=tc__console_proc, registers tc__stdio_exit_cleanup in atexit slot 1. Returns to or NULL."
+ },
+ {
+  "entry": 355158,
+  "old_name": "FUN_00056b56",
+  "name": "tc_cgotoxy",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long x"
+   ],
+   [
+    8,
+    4,
+    "long y"
+   ],
+   [
+    12,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: cursor col=x-1, row=y-1 (1-based). Unused by game."
+ },
+ {
+  "entry": 355212,
+  "old_name": "FUN_00056b8c",
+  "name": "tc_cgetxy",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long* x"
+   ],
+   [
+    8,
+    4,
+    "long* y"
+   ],
+   [
+    12,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: *x=col+1, *y=row+1. Unused."
+ },
+ {
+  "entry": 355270,
+  "old_name": "FUN_00056bc6",
+  "name": "tc_ccleos",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: clear to end of screen. Unused."
+ },
+ {
+  "entry": 355314,
+  "old_name": "FUN_00056bf2",
+  "name": "tc_ccleol",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: clear to end of line. Unused."
+ },
+ {
+  "entry": 355352,
+  "old_name": "FUN_00056c18",
+  "name": "tc_csettabs",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long tabwidth"
+   ],
+   [
+    8,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: tab width (clamped to 1..ncols). Unused."
+ },
+ {
+  "entry": 355418,
+  "old_name": "FUN_00056c5a",
+  "name": "tc_csetmode",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long mode"
+   ],
+   [
+    8,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: 0=C_RAW,1=C_CBREAK,2=C_NOECHO,3=C_ECHO (mode bits 7/6/5 of A5-0x16F6). Unused."
+ },
+ {
+  "entry": 355514,
+  "old_name": "FUN_00056cba",
+  "name": "tc_cinverse",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long on"
+   ],
+   [
+    8,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: on -> installs QDProcs with textProc tc__console_inverse_textProc (chars with bit7 drawn inverted); off -> removes. Unused."
+ },
+ {
+  "entry": 355628,
+  "old_name": "FUN_00056d2c",
+  "name": "tc_cshow",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: SelectWindow if not front, ShowWindow."
+ },
+ {
+  "entry": 355666,
+  "old_name": "FUN_00056d52",
+  "name": "tc_chide",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: HideWindow. Unused."
+ },
+ {
+  "entry": 355686,
+  "old_name": "FUN_00056d66",
+  "name": "tc_cecho2file",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* name"
+   ],
+   [
+    8,
+    4,
+    "long append"
+   ],
+   [
+    12,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: echo output to file (fopen mode A5-0x16CC if append else A5-0x16CA)."
+ },
+ {
+  "entry": 355766,
+  "old_name": "FUN_00056db6",
+  "name": "tc_cecho2printer",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console: echo output to a tmpfile printed on close. Unused."
+ },
+ {
+  "entry": 355818,
+  "old_name": "FUN_00056dea",
+  "name": "tc__console_init_std",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Lazily attaches stdin/stdout/stderr (flag bit7 of their byte0) to one console window via tc_freopenc; optional startup echo file (A5-0x1722)."
+ },
+ {
+  "entry": 355938,
+  "old_name": "FUN_00056e62",
+  "name": "tc__console_InitToolbox",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "MaxApplZone, 10x MoreMasters, InitGraf(new 0xCE-byte QD globals), InitFonts/Windows/TEInit/Dialogs/Menus, Apple/File/Edit menus, DrawMenuBar, FlushEvents, InitCursor; sets A5-0x16F2=1."
+ },
+ {
+  "entry": 356108,
+  "old_name": "FUN_00056f0c",
+  "name": "tc__console_poll_event",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console event pump: feeds pending pasted text as keystrokes, else SystemTask/GetNextEvent/SystemEvent, handles menu bar (DA open, Quit -> exit(0), Edit -> SystemEdit) (console internal)."
+ },
+ {
+  "entry": 356396,
+  "old_name": "FUN_0005702c",
+  "name": "tc__console_new_window",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Creates the console window (NewWindow, font/size from globals, TENew, rows/cols), installs fake DA driver for event routing; returns WindowPtr (console internal)."
+ },
+ {
+  "entry": 356774,
+  "old_name": "FUN_000571a6",
+  "name": "tc__console_close_window",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Disposes console window/TE if no other stream uses it (console internal)."
+ },
+ {
+  "entry": 356866,
+  "old_name": "FUN_00057202",
+  "name": "tc__console_end_echo",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Closes the echo file (A5-0x16FA), printing it first if echo-to-printer (console internal)."
+ },
+ {
+  "entry": 356896,
+  "old_name": "FUN_00057220",
+  "name": "tc__console_select",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "checkfp; flushes all other dirty streams on the same window; returns fp's WindowPtr (0x20) (console internal)."
+ },
+ {
+  "entry": 356972,
+  "old_name": "seg19_05726c",
+  "name": "tc__stdio_exit_cleanup",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "atexit slot 1: fflush dirty console streams; if console active and A5-0x1762 set, retitles window and waits for a keypress ('press return'); then fclose all 15 streams."
+ },
+ {
+  "entry": 357140,
+  "old_name": "seg19_057314",
+  "name": "tc__console_proc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "long cmd"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Console stream proc: cmd 0 = read line (event loop until input), 1 = write buffer (tc__console_write), 2 = close; Cmd-. -> raise(SIGINT=4). Returns 0/-1."
+ },
+ {
+  "entry": 357450,
+  "old_name": "seg19_05744a",
+  "name": "tc__console_inverse_textProc",
+  "conv": "pascal",
+  "purge": 14,
+  "args": [
+   [
+    4,
+    4,
+    "Point denom"
+   ],
+   [
+    8,
+    4,
+    "Point numer"
+   ],
+   [
+    12,
+    4,
+    "char* textBuf"
+   ],
+   [
+    16,
+    2,
+    "short byteCount"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "QuickDraw textProc (Pascal, pops 14): draws runs with StdText; chars with bit7 set are drawn (char&0x7F) in TextMode 4 (inverted), then TextMode 0."
+ },
+ {
+  "entry": 357564,
+  "old_name": "FUN_000574bc",
+  "name": "tc__console_clear_from_line",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long line"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: blank lines from `line` to bottom, col=0."
+ },
+ {
+  "entry": 357630,
+  "old_name": "FUN_000574fe",
+  "name": "tc__console_clear_eol_impl",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: TEDelete from cursor to end of line."
+ },
+ {
+  "entry": 357690,
+  "old_name": "FUN_0005753a",
+  "name": "tc__console_write",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* buf"
+   ],
+   [
+    8,
+    2,
+    "short n"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: output n chars handling BEL(7) BS(8) TAB(9) LF(10) VT(11) FF(12) CR(13); checks event queue for Cmd-. (sets A5-0x16F0)."
+ },
+ {
+  "entry": 357974,
+  "old_name": "FUN_00057656",
+  "name": "tc__console_put_text",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* p"
+   ],
+   [
+    8,
+    4,
+    "long len"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: puts printable run into TE text, wrapping lines."
+ },
+ {
+  "entry": 358160,
+  "old_name": "FUN_00057710",
+  "name": "tc__console_input_delete",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long a"
+   ],
+   [
+    8,
+    4,
+    "long b"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: delete chars from pending input line (TEDelete/TECopy) (low confidence)."
+ },
+ {
+  "entry": 358290,
+  "old_name": "FUN_00057792",
+  "name": "tc__console_input_insert",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long a"
+   ],
+   [
+    8,
+    2,
+    "short c"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: insert typed char into input line (TEKey/Munger) (low confidence)."
+ },
+ {
+  "entry": 358420,
+  "old_name": "FUN_00057814",
+  "name": "tc__console_fill_scratch",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    2,
+    "short ch"
+   ],
+   [
+    6,
+    4,
+    "long a"
+   ],
+   [
+    10,
+    4,
+    "long n"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: SetHandleSize scratch handle and fill (low confidence)."
+ },
+ {
+  "entry": 358474,
+  "old_name": "FUN_0005784a",
+  "name": "tc__console_te_insert_at",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long a"
+   ],
+   [
+    8,
+    4,
+    "long b"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: TEPaste scratch at offset (low confidence)."
+ },
+ {
+  "entry": 358510,
+  "old_name": "FUN_0005786e",
+  "name": "tc__console_te_activate",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long a"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: set selection/caret and TEActivate."
+ },
+ {
+  "entry": 358622,
+  "old_name": "FUN_000578de",
+  "name": "tc__console_te_deactivate",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Console internal: TEDeactivate; returns *TEHandle."
+ },
+ {
+  "entry": 358648,
+  "old_name": "FUN_000578f8",
+  "name": "tc__console_trim_text",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: drops scrolled-off lines from TE text (Munger, TECalText)."
+ },
+ {
+  "entry": 358844,
+  "old_name": "FUN_000579bc",
+  "name": "tc__console_resize_te",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: recompute TE rects after resize/zoom."
+ },
+ {
+  "entry": 358938,
+  "old_name": "FUN_00057a1a",
+  "name": "tc__console_enter_port",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* win"
+   ],
+   [
+    8,
+    4,
+    "void* save"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: save port, select console window, process pending update (BeginUpdate/TEUpdate)."
+ },
+ {
+  "entry": 359048,
+  "old_name": "FUN_00057a88",
+  "name": "tc__console_leave_port",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* save"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: restore port/current window."
+ },
+ {
+  "entry": 359088,
+  "old_name": "FUN_00057ab0",
+  "name": "tc__console_set_window",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* win"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: switch current console window state (copies 0x2E-byte state record)."
+ },
+ {
+  "entry": 359166,
+  "old_name": "FUN_00057afe",
+  "name": "tc__console_lock_text",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Console internal: HLock TE text, returns pointer."
+ },
+ {
+  "entry": 359206,
+  "old_name": "FUN_00057b26",
+  "name": "tc__console_unlock_text",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: HUnlock TE text."
+ },
+ {
+  "entry": 359214,
+  "old_name": "FUN_00057b2e",
+  "name": "tc__console_newline",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: newline: echo line to file, scroll (ScrollRect), handle pause (GetOSEvent) ."
+ },
+ {
+  "entry": 359488,
+  "old_name": "FUN_00057c40",
+  "name": "tc__console_install_driver",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 2,
+  "ret_where": "D0",
+  "semantics": "Console internal: builds DA driver header handle (open/close=tc__console_driver_noop, control=tc__console_driver_control) and DrvrInstall; returns refnum used as windowKind."
+ },
+ {
+  "entry": 359620,
+  "old_name": "seg19_057cc4",
+  "name": "tc__console_driver_noop",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console fake-driver open/close entry (rts)."
+ },
+ {
+  "entry": 359624,
+  "old_name": "seg19_057cc8",
+  "name": "tc__console_driver_control",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console fake-driver control routine: accEvent/accRun/accCut/Copy/Paste/Clear/accMenu dispatch (low confidence)."
+ },
+ {
+  "entry": 359908,
+  "old_name": "FUN_00057de4",
+  "name": "tc__console_idle",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: TEIdle and I-beam cursor when over window."
+ },
+ {
+  "entry": 359972,
+  "old_name": "FUN_00057e24",
+  "name": "tc__console_mousedown",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* event"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: mouse-down dispatch (zoom/grow/content)."
+ },
+ {
+  "entry": 360096,
+  "old_name": "FUN_00057ea0",
+  "name": "tc__console_zoom",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long a"
+   ],
+   [
+    8,
+    4,
+    "long b"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: TrackBox/ZoomWindow."
+ },
+ {
+  "entry": 360152,
+  "old_name": "FUN_00057ed8",
+  "name": "tc__console_grow",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long a"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: GrowWindow/SizeWindow."
+ },
+ {
+  "entry": 360220,
+  "old_name": "FUN_00057f1c",
+  "name": "tc__console_content_click",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* event"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: TEClick selection handling."
+ },
+ {
+  "entry": 360390,
+  "old_name": "FUN_00057fc6",
+  "name": "tc__console_edit_command",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long cmd"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: cut/copy/paste/interrupt/quit commands (low confidence)."
+ },
+ {
+  "entry": 360650,
+  "old_name": "FUN_000580ca",
+  "name": "tc__console_key",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long ch"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: processes a typed key (line editing, RAW/CBREAK/ECHO modes, EOF)."
+ },
+ {
+  "entry": 361214,
+  "old_name": "FUN_000582fe",
+  "name": "tc__console_cut",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: cut (copy + delete selection of input)."
+ },
+ {
+  "entry": 361292,
+  "old_name": "FUN_0005834c",
+  "name": "tc__console_copy",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: TECopy, ZeroScrap, PutScrap('TEXT')."
+ },
+ {
+  "entry": 361358,
+  "old_name": "FUN_0005838e",
+  "name": "tc__console_paste",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: GetScrap('TEXT') into handle A5-0x1706 fed as keystrokes."
+ },
+ {
+  "entry": 361458,
+  "old_name": "FUN_000583f2",
+  "name": "tc__console_print_echo",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: PrOpen; tc__console_print_file; PrClose."
+ },
+ {
+  "entry": 361500,
+  "old_name": "FUN_0005841c",
+  "name": "tc__console_print_file",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Console internal: prints echo file via Printing Manager (PrJobDialog, PrOpenDoc, DrawText per line)."
+ },
+ {
+  "entry": 361908,
+  "old_name": "FUN_000585b4",
+  "name": "tc_isalnum",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "isalnum: returns (long)(signed char)__ctype[(unsigned char)c] & 0xD0 (ctype table at A5-0x165E, filled from DATA). Unused by game."
+ },
+ {
+  "entry": 361940,
+  "old_name": "FUN_000585d4",
+  "name": "tc_isalpha",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "isalpha: returns (long)(signed char)__ctype[(unsigned char)c] & 0xC0 (ctype table at A5-0x165E, filled from DATA). Unused by game."
+ },
+ {
+  "entry": 361972,
+  "old_name": "FUN_000585f4",
+  "name": "tc_iscntrl",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "iscntrl: returns (long)(signed char)__ctype[(unsigned char)c] & 0x03 (ctype table at A5-0x165E, filled from DATA). Unused by game."
+ },
+ {
+  "entry": 362002,
+  "old_name": "FUN_00058612",
+  "name": "tc_isdigit",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "isdigit: returns (long)(signed char)__ctype[(unsigned char)c] & 0x10 (ctype table at A5-0x165E, filled from DATA). Unused by game."
+ },
+ {
+  "entry": 362032,
+  "old_name": "FUN_00058630",
+  "name": "tc_isgraph",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "isgraph: returns (long)(signed char)__ctype[(unsigned char)c] & 0xD8 (ctype table at A5-0x165E, filled from DATA). Unused by game."
+ },
+ {
+  "entry": 362064,
+  "old_name": "FUN_00058650",
+  "name": "tc_isupper",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "isupper: returns (long)(signed char)__ctype[(unsigned char)c] & 0x80 (ctype table at A5-0x165E, filled from DATA). Unused by game. NOTE upper/lower naming inferred from tolower/toupper (0x80=upper,0x40=lower); source order suggests the opposite pair could be swapped."
+ },
+ {
+  "entry": 362096,
+  "old_name": "FUN_00058670",
+  "name": "tc_isprint",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "isprint: returns (long)(signed char)__ctype[(unsigned char)c] & 0xDC (ctype table at A5-0x165E, filled from DATA). Unused by game."
+ },
+ {
+  "entry": 362128,
+  "old_name": "FUN_00058690",
+  "name": "tc_ispunct",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "ispunct: returns (long)(signed char)__ctype[(unsigned char)c] & 0x08 (ctype table at A5-0x165E, filled from DATA). Unused by game."
+ },
+ {
+  "entry": 362158,
+  "old_name": "FUN_000586ae",
+  "name": "tc_isspace",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "isspace: returns (long)(signed char)__ctype[(unsigned char)c] & 0x06 (ctype table at A5-0x165E, filled from DATA). Unused by game."
+ },
+ {
+  "entry": 362188,
+  "old_name": "FUN_000586cc",
+  "name": "tc_islower",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "islower: returns (long)(signed char)__ctype[(unsigned char)c] & 0x40 (ctype table at A5-0x165E, filled from DATA). Unused by game. NOTE upper/lower naming inferred from tolower/toupper (0x80=upper,0x40=lower); source order suggests the opposite pair could be swapped."
+ },
+ {
+  "entry": 362218,
+  "old_name": "FUN_000586ea",
+  "name": "tc_isxdigit",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "isxdigit: returns (long)(signed char)__ctype[(unsigned char)c] & 0x30 (ctype table at A5-0x165E, filled from DATA). Unused by game."
+ },
+ {
+  "entry": 362248,
+  "old_name": "FUN_00058708",
+  "name": "tc_tolower",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Returns c^0x20 if __ctype[(uchar)c]&0x80 else c (whole 32-bit c returned). Upper/lower naming inferred. Unused."
+ },
+ {
+  "entry": 362286,
+  "old_name": "FUN_0005872e",
+  "name": "tc_toupper",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Returns c^0x20 if __ctype[(uchar)c]&0x40 else c. Unused."
+ },
+ {
+  "entry": 362326,
+  "old_name": "FUN_00058756",
+  "name": "tc_remove",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* name"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "PBDelete(name as Pascal str, vRefNum 0); error -> errno=OSErr, -1; else 0. Unused."
+ },
+ {
+  "entry": 362384,
+  "old_name": "FUN_00058790",
+  "name": "tc_rename",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* old"
+   ],
+   [
+    8,
+    4,
+    "char* new"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "PBRename; -1/errno on error. Unused."
+ },
+ {
+  "entry": 362460,
+  "old_name": "FUN_000587dc",
+  "name": "tc_tmpfile",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "tmpnam into local buffer, fopen(name, mode@A5-0x1536), sets temp flag (byte0 bit0, deleted on close)."
+ },
+ {
+  "entry": 362526,
+  "old_name": "FUN_0005881e",
+  "name": "tc_tmpnam",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* buf"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "tmpnam(buf or static A5-0x1556) via tc__tmpnam_impl. Unused."
+ },
+ {
+  "entry": 362564,
+  "old_name": "FUN_00058844",
+  "name": "tc__tmpnam_impl",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* buf"
+   ],
+   [
+    8,
+    4,
+    "char* prefix"
+   ],
+   [
+    12,
+    4,
+    "long* counter"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Builds Pascal name with sprintf(buf+1, fmt@A5-0x152C, prefix, ++*counter) (counter wraps 9999->1) until PBGetFInfo returns fnfErr; converts to C string in place; returns buf or 0 if counter wrapped to start."
+ },
+ {
+  "entry": 362698,
+  "old_name": "FUN_000588ca",
+  "name": "tc_fopen",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* name"
+   ],
+   [
+    8,
+    4,
+    "char* mode"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "fopen: tc__find_free_file then freopen(name,mode,fp)."
+ },
+ {
+  "entry": 362724,
+  "old_name": "FUN_000588e4",
+  "name": "tc_freopen",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* name"
+   ],
+   [
+    8,
+    4,
+    "char* mode"
+   ],
+   [
+    12,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Parses mode: 'r' (perm 1 fsRdPerm, flags 0), 'w' (perm 2, flags 3=create|trunc), 'a' (perm 2, flags 9=create|append); 'b' -> flags|0x10 (binary), '+' -> perm 3; other -> errno 22, NULL. Calls tc__fopen_impl."
+ },
+ {
+  "entry": 362854,
+  "old_name": "FUN_00058966",
+  "name": "tc__fopen_impl",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* name"
+   ],
+   [
+    8,
+    4,
+    "long perm"
+   ],
+   [
+    12,
+    4,
+    "long oflags"
+   ],
+   [
+    16,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "fclose(fp); PBCreate if oflags&1 (success clears trunc bit; dupFNErr ok unless oflags&4); PBOpen (error -> errno, delete if just created, NULL); refnum->0x06; trunc -> PBSetEOF(0) else PBGetEOF -> 0x1C; append -> bit1 & pos=EOF; binary -> bit6; setvbuf(fp,NULL,_IOFBF,512); proc=tc__file_proc; new file -> tc__set_file_type; registers tc__close_all_files in _atexit slot 0. Returns fp."
+ },
+ {
+  "entry": 363146,
+  "old_name": "FUN_00058a8a",
+  "name": "tc__set_file_type",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "uchar* pname"
+   ],
+   [
+    8,
+    4,
+    "long oflags"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "If file created: PBSetFInfo type = (binary? global A5-0x1524 : 'TEXT'), creator = A5-0x1520."
+ },
+ {
+  "entry": 363218,
+  "old_name": "seg19_058ad2",
+  "name": "tc__close_all_files",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "fclose all 15 FILE slots (A5-0x151C, 0x28 bytes each)."
+ },
+ {
+  "entry": 363256,
+  "old_name": "seg19_058af8",
+  "name": "tc__file_proc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "long cmd"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Disk file stream proc. cmd 0: PBRead(cnt bytes at absolute pos-cnt) into buffer, eofErr with data -> ok, no data -> EOF bit5, -1; text mode converts CR->LF. cmd 1: extends EOF if needed (PBSetEOF), text mode converts LF->CR IN PLACE, PBWrite, updates EOF field. cmd 2: tc__file_close. Errors set bit4 (error), errno=OSErr, return -1."
+ },
+ {
+  "entry": 363608,
+  "old_name": "FUN_00058c58",
+  "name": "tc__file_close",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "PBClose; temp files (bit0) are deleted (PBDelete / PBHDelete for HFS); PBFlushVol. Returns OSErr."
+ },
+ {
+  "entry": 363820,
+  "old_name": "FUN_00058d2c",
+  "name": "tc__replace_char",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* buf"
+   ],
+   [
+    8,
+    4,
+    "long n"
+   ],
+   [
+    12,
+    4,
+    "long from"
+   ],
+   [
+    16,
+    4,
+    "long to"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Replaces every byte `from` with `to` in buf[0..n) (uses memchr)."
+ },
+ {
+  "entry": 363888,
+  "old_name": "FUN_00058d70",
+  "name": "tc_fseek",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "long offset"
+   ],
+   [
+    12,
+    4,
+    "long whence"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Only for refnum>0 else errno=19,-1. fflush; SEEK_CUR adds logical pos, SEEK_END adds EOF field (0x1C), other whence -> -1; negative -> errno 22,-1; pos=result, clears EOF bit; 0. No trap (pos used on next read/write)."
+ },
+ {
+  "entry": 364000,
+  "old_name": "FUN_00058de0",
+  "name": "tc_fsetpos",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "long* pos"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "fseek(fp,*pos,SEEK_SET). Unused."
+ },
+ {
+  "entry": 364024,
+  "old_name": "FUN_00058df8",
+  "name": "tc_rewind",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "fseek(fp,0,0); clears error bit4."
+ },
+ {
+  "entry": 364052,
+  "old_name": "FUN_00058e14",
+  "name": "tc_ftell",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "refnum>0 ? pos-cnt : (errno=19,-1). Unused."
+ },
+ {
+  "entry": 364092,
+  "old_name": "FUN_00058e3c",
+  "name": "tc_fgetpos",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "long* pos"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "*pos = pos-cnt; 0 (or errno 19,-1). Unused."
+ },
+ {
+  "entry": 364140,
+  "old_name": "FUN_00058e6c",
+  "name": "tc_fwrite",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* ptr"
+   ],
+   [
+    8,
+    4,
+    "ulong size"
+   ],
+   [
+    12,
+    4,
+    "ulong n"
+   ],
+   [
+    16,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "fwrite: total=size*n (0 -> 0); large aligned unbuffered-style writes go straight through proc(1); otherwise copies via buffer / putc. Returns n - ceil(unwritten/size). Used by vfprintf for field output."
+ },
+ {
+  "entry": 364482,
+  "old_name": "FUN_00058fc2",
+  "name": "tc_fgets",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "long n"
+   ],
+   [
+    12,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "fgets: n<1 -> NULL; reads up to n-1 chars, stops after '\\n' (kept); EOF with nothing read -> NULL; NUL-terminates; returns s."
+ },
+ {
+  "entry": 364592,
+  "old_name": "FUN_00059030",
+  "name": "tc_gets",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "gets from stdin (A5-0x151C), newline not stored. Unused."
+ },
+ {
+  "entry": 364686,
+  "old_name": "FUN_0005908e",
+  "name": "tc_fgetc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "fgetc: cnt-- ? *ptr++ : tc__filbuf(fp). Returns 0..255 or -1."
+ },
+ {
+  "entry": 364738,
+  "old_name": "FUN_000590c2",
+  "name": "tc_getc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Function version of getc (same as fgetc). Unused."
+ },
+ {
+  "entry": 364828,
+  "old_name": "FUN_0005911c",
+  "name": "tc__find_free_file",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Returns first of the 12 non-std FILE slots (A5-0x14A4..) with refnum 0, else errno=24 and NULL."
+ },
+ {
+  "entry": 364876,
+  "old_name": "FUN_0005914c",
+  "name": "tc_fprintf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "char* fmt"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "fprintf -> tc_vfprintf(fp, fmt, &args). Unused."
+ },
+ {
+  "entry": 364900,
+  "old_name": "FUN_00059164",
+  "name": "tc_printf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* fmt"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "printf -> tc_vprintf. Unused."
+ },
+ {
+  "entry": 364920,
+  "old_name": "FUN_00059178",
+  "name": "tc_vprintf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* fmt"
+   ],
+   [
+    8,
+    4,
+    "void* va"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "tc_vfprintf(stdout=A5-0x14F4, fmt, va)."
+ },
+ {
+  "entry": 364944,
+  "old_name": "FUN_00059190",
+  "name": "tc_fscanf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "char* fmt"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "fscanf -> tc_vfscanf. Unused."
+ },
+ {
+  "entry": 364968,
+  "old_name": "FUN_000591a8",
+  "name": "tc_scanf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* fmt"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "scanf -> tc_vscanf. Unused."
+ },
+ {
+  "entry": 364988,
+  "old_name": "FUN_000591bc",
+  "name": "tc_vscanf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* fmt"
+   ],
+   [
+    8,
+    4,
+    "void* va"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "tc_vfscanf(stdin=A5-0x151C, fmt, va)."
+ },
+ {
+  "entry": 365012,
+  "old_name": "FUN_000591d4",
+  "name": "tc_setbuf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "char* buf"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "setvbuf(fp, buf, buf?_IOFBF(0):_IONBF(2), 512)."
+ },
+ {
+  "entry": 365050,
+  "old_name": "FUN_000591fa",
+  "name": "tc_setvbuf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "char* buf"
+   ],
+   [
+    12,
+    4,
+    "long mode"
+   ],
+   [
+    16,
+    4,
+    "ulong size"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "mode 0=_IOFBF,1=_IOLBF,2=_IONBF (buffer = 1 byte at fp+4); size 0 with mode<2 -> -1; buf NULL -> malloc(size) (flag bit2); frees previous malloc'd buffer; sets buf/size, reset buffer; 0 or -1."
+ },
+ {
+  "entry": 365184,
+  "old_name": "FUN_00059280",
+  "name": "tc_fflush",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "fflush(fp) -> flush_buffer; fflush(NULL) flushes all writing streams, -1 if any failed."
+ },
+ {
+  "entry": 365268,
+  "old_name": "FUN_000592d4",
+  "name": "tc_fclose",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Clears bit7; if refnum!=0: flush, proc(fp,2), free malloc'd buffer, memset(fp,0,0x28). Returns 0 or -1."
+ },
+ {
+  "entry": 365362,
+  "old_name": "seg19_059332",
+  "name": "tc_memcpy",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* dst"
+   ],
+   [
+    8,
+    4,
+    "void* src"
+   ],
+   [
+    12,
+    4,
+    "ulong n"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Forward byte-by-byte copy of n bytes (n==0 ok, overlapping regions copied forward), returns dst."
+ },
+ {
+  "entry": 365386,
+  "old_name": "seg19_05934a",
+  "name": "tc_memmove",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* dst"
+   ],
+   [
+    8,
+    4,
+    "void* src"
+   ],
+   [
+    12,
+    4,
+    "ulong n"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Overlap-safe byte copy: if src>dst forward else backward; returns dst."
+ },
+ {
+  "entry": 365426,
+  "old_name": "seg19_059372",
+  "name": "tc_memcmp",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* a"
+   ],
+   [
+    8,
+    4,
+    "void* b"
+   ],
+   [
+    12,
+    4,
+    "ulong n"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Unsigned byte compare; returns exactly 0, 1 (a>b) or -1 (a<b) as 32-bit long."
+ },
+ {
+  "entry": 365458,
+  "old_name": "FUN_00059392",
+  "name": "tc_memchr",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* s"
+   ],
+   [
+    8,
+    4,
+    "long c"
+   ],
+   [
+    12,
+    4,
+    "ulong n"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Finds first byte == (char)c (low byte of the 32-bit arg at 0xB(SP)) in n bytes; returns pointer or NULL."
+ },
+ {
+  "entry": 365488,
+  "old_name": "seg19_0593b0",
+  "name": "tc_memset",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* s"
+   ],
+   [
+    8,
+    4,
+    "long c"
+   ],
+   [
+    12,
+    4,
+    "ulong n"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Fills n bytes with (char)c (c is a 32-bit int, low byte used), returns s."
+ },
+ {
+  "entry": 365512,
+  "old_name": "FUN_000593c8",
+  "name": "tc_vfprintf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "char* fmt"
+   ],
+   [
+    12,
+    4,
+    "void* va"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "THINK C printf engine. Flags - + space # 0; width/precision digits or '*' (32-bit int arg; negative '*' width -> left-justify); modifiers h (d/i: sign-extend low 16 bits; u/o/x/X: &0xFFFF; %hn stores 16-bit), l (no effect: int already 32-bit), L. ALL integer args are 32-bit (game code ext.l's 16-bit values before calling). %d %i %u %o %x %X %c %s %n %p %e %E %f %g %G %%. Ints: precision = min digits (default 1, '0' flag without precision pads to width incl. sign); precision 0 and value 0 -> no digits. '#': o -> leading 0, x/X -> '0x'/'0X' prefix even for 0. %p = %X with precision 8 (8 uppercase hex digits, no prefix). %s with precision uses memchr; %#s prints a Pascal string (length byte, precision limits). Floats are 10-byte SANE extended args (consumes 10 bytes), converted with SANE num2dec (max 19 sig digits); exponent >=2 digits; INF/NAN text. An unknown conversion character stops formatting and returns the count so far. Returns chars written or -1 on output error."
+ },
+ {
+  "entry": 367902,
+  "old_name": "FUN_00059d1e",
+  "name": "tc__printf_num2dec",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long style"
+   ],
+   [
+    8,
+    4,
+    "long digits"
+   ],
+   [
+    12,
+    4,
+    "void* decimal"
+   ],
+   [
+    16,
+    10,
+    "extended x"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "SANE FX2DEC (Pack4 0x0B) of 10-byte extended x into Decimal record with decform{style,digits<=19}; retries with float style if result '?', strips trailing zeros (adjusting exponent), zero -> sig '0' exp 0, 'I'->\"INF\", 'N'->\"NAN\"."
+ },
+ {
+  "entry": 368098,
+  "old_name": "seg19_059de2",
+  "name": "tc_qsort",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* base"
+   ],
+   [
+    8,
+    4,
+    "ulong n"
+   ],
+   [
+    12,
+    4,
+    "ulong size"
+   ],
+   [
+    16,
+    4,
+    "long (*cmp)(void*,void*)"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "qsort: stores base/size/cmp in globals (A5-0x1286/-0x1282/-0x127E) and runs index quicksort tc__isort(n, cmp_idx, swap_idx). Algorithm (tc__quicksort(lo,hi), hi exclusive): while hi-lo>1: i=lo,j=hi; loop{ do i++ while i<hi && cmp(i,lo)<0; do j-- while j>lo && cmp(j,lo)>0; if i<j {swap(i,j); continue loop} else break }; if j==lo {lo++; continue}; swap(lo,j); if (hi-1-j) > (j-lo) {recurse(lo,j); lo=j+1} else {recurse(j+1,hi); hi=j}. cmp(i,j)=cmp(base+i*size, base+j*size); swap exchanges size bytes. Not stable; tie order must follow this exact sequence. Used by resCloseFile."
+ },
+ {
+  "entry": 368140,
+  "old_name": "seg19_059e0c",
+  "name": "tc__qsort_cmp_idx",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "ulong i"
+   ],
+   [
+    8,
+    4,
+    "ulong j"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Returns user_cmp(base+i*size, base+j*size)."
+ },
+ {
+  "entry": 368190,
+  "old_name": "seg19_059e3e",
+  "name": "tc__qsort_swap_idx",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "ulong i"
+   ],
+   [
+    8,
+    4,
+    "ulong j"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Swaps `size` bytes between element i and j (byte loop)."
+ },
+ {
+  "entry": 368252,
+  "old_name": "FUN_00059e7c",
+  "name": "tc__isort",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "ulong n"
+   ],
+   [
+    8,
+    4,
+    "void* cmpfn"
+   ],
+   [
+    12,
+    4,
+    "void* swapfn"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Stores index cmp/swap callbacks (A5-0x127A/-0x1276) and calls tc__quicksort(0, n)."
+ },
+ {
+  "entry": 368282,
+  "old_name": "FUN_00059e9a",
+  "name": "tc__quicksort",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "ulong lo"
+   ],
+   [
+    8,
+    4,
+    "ulong hi"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Recursive index quicksort on [lo,hi), pivot = element lo; exact algorithm in tc_qsort semantics. Uses global A5-0x128A as i."
+ },
+ {
+  "entry": 368464,
+  "old_name": "FUN_00059f50",
+  "name": "tc_vfscanf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "char* fmt"
+   ],
+   [
+    12,
+    4,
+    "void* va"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "THINK C scanf engine. Format whitespace skips input isspace (ctype&6); literal chars must match (mismatch -> ungetc & stop). '%': '*' suppress, width, '?' (base taken from next 32-bit arg, used by strtol), h (store short / %hf double), l (long = default 32-bit / %lf 10-byte extended), L (extended). d(10) i(0=auto) u o x X p(long) c(default width 1, no NUL) s [..] (scanset, ^, ranges) e f g E G (%f stores 4-byte float!) n (chars consumed, not counted). Integer overflow clamps (LONG_MIN/MAX or SHRT for h) with errno 34. Returns number of assignments, or -1 if input ended before the first conversion."
+ },
+ {
+  "entry": 370844,
+  "old_name": "FUN_0005a89c",
+  "name": "tc__scanset_clear",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long whitespace"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Clears 256-bit set at A5-0x126A; if arg!=0 sets {9..13,' '} and inverts (used by %s)."
+ },
+ {
+  "entry": 370896,
+  "old_name": "FUN_0005a8d0",
+  "name": "tc__scanset_add",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Sets bit c in scan set."
+ },
+ {
+  "entry": 370928,
+  "old_name": "FUN_0005a8f0",
+  "name": "tc__scanset_invert",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Inverts the 256-bit scan set (no args)."
+ },
+ {
+  "entry": 370950,
+  "old_name": "FUN_0005a906",
+  "name": "tc__scanset_test",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Returns nonzero if bit c set (EOF -1 maps to byte -1/8...)."
+ },
+ {
+  "entry": 370988,
+  "old_name": "FUN_0005a92c",
+  "name": "tc__scanf_dec2num",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    2,
+    "short saneFormat"
+   ],
+   [
+    6,
+    4,
+    "void* decimal"
+   ],
+   [
+    10,
+    4,
+    "void* dest"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "SANE FDEC2X (Pack4) Decimal -> dest in SANE format (0=extended,0x800=double,0x1000=single); overflow/underflow -> errno 34 and INF/0 result."
+ },
+ {
+  "entry": 371162,
+  "old_name": "FUN_0005a9da",
+  "name": "tc_signal",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long sig"
+   ],
+   [
+    8,
+    4,
+    "void* handler"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "sig must be 1..6 else errno 22,-1; swaps handler in table A5-0x124A, returns old."
+ },
+ {
+  "entry": 371230,
+  "old_name": "FUN_0005aa1e",
+  "name": "tc_raise",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long sig"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "sig 1..6 else -1/errno 22; handler 1 (SIG_IGN) ignored; else reset to 0 and: 0 (SIG_DFL) -> _exit; else handler(sig). Returns 0."
+ },
+ {
+  "entry": 371338,
+  "old_name": "FUN_0005aa8a",
+  "name": "tc__checkfp",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "If byte0 bit7 (std stream not yet attached) -> tc__console_init_std; if refnum==0 makes it a dummy stream (1-byte buffer at fp+4, proc=nullproc). Returns fp."
+ },
+ {
+  "entry": 371396,
+  "old_name": "FUN_0005aac4",
+  "name": "tc__c2pstr_copy",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* src"
+   ],
+   [
+    8,
+    4,
+    "uchar* dst"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Copies C string to Pascal string at dst (length = strlen & 0xFF); returns dst."
+ },
+ {
+  "entry": 371436,
+  "old_name": "FUN_0005aaec",
+  "name": "tc__sscanf_fp_init",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "char* str"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "tc__string_fp_init(fp, str, strlen(str)); returns fp."
+ },
+ {
+  "entry": 371470,
+  "old_name": "FUN_0005ab0e",
+  "name": "tc__sprintf_fp_init",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "char* buf"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "tc__string_fp_init(fp, buf, -1) (unbounded), sets writing bit3; returns fp."
+ },
+ {
+  "entry": 371504,
+  "old_name": "FUN_0005ab30",
+  "name": "tc__string_fp_init",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ],
+   [
+    8,
+    4,
+    "char* p"
+   ],
+   [
+    12,
+    4,
+    "long cnt"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "memset(fp,0,0x28); refnum=-1; ptr=p; cnt=cnt; proc=tc__stdio_nullproc."
+ },
+ {
+  "entry": 371560,
+  "old_name": "seg19_05ab68",
+  "name": "tc__stdio_nullproc",
+  "conv": "c",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Stream proc for string FILEs: returns -1."
+ },
+ {
+  "entry": 371570,
+  "old_name": "seg19_05ab72",
+  "name": "tc_sprintf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* buf"
+   ],
+   [
+    8,
+    4,
+    "char* fmt"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "sprintf -> tc_vsprintf(buf, fmt, &varargs). Varargs are 32-bit ints / pointers / 10-byte extended. Returns length; buf NUL-terminated (no bound)."
+ },
+ {
+  "entry": 371594,
+  "old_name": "seg19_05ab8a",
+  "name": "tc_vsprintf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* buf"
+   ],
+   [
+    8,
+    4,
+    "char* fmt"
+   ],
+   [
+    12,
+    4,
+    "void* va"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Builds string FILE on stack (cnt=-1), n=tc_vfprintf; if n>=0 buf[n]=0; returns n."
+ },
+ {
+  "entry": 371654,
+  "old_name": "FUN_0005abc6",
+  "name": "tc_sscanf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* str"
+   ],
+   [
+    8,
+    4,
+    "char* fmt"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "sscanf -> tc_vsscanf(str, fmt, &varargs)."
+ },
+ {
+  "entry": 371678,
+  "old_name": "FUN_0005abde",
+  "name": "tc_vsscanf",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* str"
+   ],
+   [
+    8,
+    4,
+    "char* fmt"
+   ],
+   [
+    12,
+    4,
+    "void* va"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "String FILE with cnt=strlen(str) then tc_vfscanf."
+ },
+ {
+  "entry": 371714,
+  "old_name": "FUN_0005ac02",
+  "name": "tc__fp_proc_fill",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "return fp->proc(fp, 0)."
+ },
+ {
+  "entry": 371738,
+  "old_name": "FUN_0005ac1a",
+  "name": "tc__fp_proc_flush",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "return fp->proc(fp, 1)."
+ },
+ {
+  "entry": 371764,
+  "old_name": "FUN_0005ac34",
+  "name": "tc__fp_proc_close",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "return fp->proc(fp, 2)."
+ },
+ {
+  "entry": 371790,
+  "old_name": "seg19_05ac4e",
+  "name": "tc_strcpy",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* dst"
+   ],
+   [
+    8,
+    4,
+    "char* src"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Copies including NUL, returns dst."
+ },
+ {
+  "entry": 371806,
+  "old_name": "seg19_05ac5e",
+  "name": "tc_strcat",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* dst"
+   ],
+   [
+    8,
+    4,
+    "char* src"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Appends src to dst, returns dst."
+ },
+ {
+  "entry": 371828,
+  "old_name": "seg19_05ac74",
+  "name": "tc_strcmp",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* a"
+   ],
+   [
+    8,
+    4,
+    "char* b"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Unsigned char compare; returns exactly -1/0/1 (32-bit)."
+ },
+ {
+  "entry": 371858,
+  "old_name": "seg19_05ac92",
+  "name": "tc_strchr",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "First occurrence of (char)c (32-bit arg, low byte), c==0 finds terminator; NULL if none."
+ },
+ {
+  "entry": 371882,
+  "old_name": "FUN_0005acaa",
+  "name": "tc_strcspn",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "char* reject"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Standard strcspn. Unused."
+ },
+ {
+  "entry": 371908,
+  "old_name": "seg19_05acc4",
+  "name": "tc_strpbrk",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "char* accept"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Standard strpbrk. Called by configFindFile."
+ },
+ {
+  "entry": 371936,
+  "old_name": "FUN_0005ace0",
+  "name": "tc_strrchr",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "long c"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Last occurrence of (char)c (terminator included). Unused."
+ },
+ {
+  "entry": 371958,
+  "old_name": "FUN_0005acf6",
+  "name": "tc_strspn",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "char* accept"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Standard strspn. Unused."
+ },
+ {
+  "entry": 371986,
+  "old_name": "FUN_0005ad12",
+  "name": "tc_strstr",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "char* sub"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Naive strstr; empty sub -> s. Unused."
+ },
+ {
+  "entry": 372016,
+  "old_name": "FUN_0005ad30",
+  "name": "tc_strtok",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ],
+   [
+    8,
+    4,
+    "char* delim"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Standard strtok, saved pointer in A5-0x1206. Unused."
+ },
+ {
+  "entry": 372078,
+  "old_name": "seg19_05ad6e",
+  "name": "tc_strlen",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Standard strlen (32-bit result)."
+ },
+ {
+  "entry": 372092,
+  "old_name": "FUN_0005ad7c",
+  "name": "tc_ungetc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long c"
+   ],
+   [
+    8,
+    4,
+    "void* fp"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "ungetc: c==-1 -> -1. checkfp. If pushback mode active (byte1 bit7): cnt!=0 -> -1. Else if cnt==bufsize!=0 (nothing consumed): pos-=cnt, cnt=0, ptr=fp+6, set byte1 bit7 (1-byte pushback at fp+5; tc__filbuf later restores the window). Else if ptr==buf: memmove the cnt bytes to the end of the buffer. Then clear EOF bit5, cnt++, *--ptr=(char)c; returns (uchar)c."
+ },
+ {
+  "entry": 372260,
+  "old_name": "FUN_0005ae24",
+  "name": "tc__new_alloc",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "ulong size"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Allocator used by operator new: identical algorithm to tc_malloc but with its OWN pool list (globals A5-0x195C/-0x1958/-0x1960/-0x1964)."
+ },
+ {
+  "entry": 372320,
+  "old_name": "FUN_0005ae60",
+  "name": "tc__new_free",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "void* p"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Same as tc_free (used by operator delete)."
+ },
+ {
+  "entry": 372342,
+  "old_name": "FUN_0005ae76",
+  "name": "tc__new_alloc_small",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    2,
+    "ushort size"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Small-block allocator for operator new pools (copy of tc__malloc_small with separate globals)."
+ },
+ {
+  "entry": 372544,
+  "old_name": "FUN_0005af40",
+  "name": "tc__lmul_stk",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long a"
+   ],
+   [
+    8,
+    4,
+    "long b"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "D0=4(SP), D1=8(SP) then falls into tc_lmul_d0d1. Caller pops. Unused."
+ },
+ {
+  "entry": 372552,
+  "old_name": "seg19_05af48",
+  "name": "tc_lmul_d0d1",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Register multiply: D0 = D0*D1 (low 32 bits). Clobbers D1 and A0; D2 preserved. Symantec C++ helper (JT 0x13CA)."
+ },
+ {
+  "entry": 372584,
+  "old_name": "FUN_0005af68",
+  "name": "tc__ldiv_stk",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long divisor"
+   ],
+   [
+    8,
+    4,
+    "long dividend"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "D1=4(SP) (divisor), D0=8(SP) (dividend), falls into tc_ldiv_d0d1. Unused."
+ },
+ {
+  "entry": 372592,
+  "old_name": "seg19_05af70",
+  "name": "tc_ldiv_d0d1",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Register signed divide: in D0=dividend, D1=divisor; out D0=quotient (trunc toward 0); D1 = quotient too (moved). Uses tc_lmod_d0d1. JT 0x13D2."
+ },
+ {
+  "entry": 372600,
+  "old_name": "FUN_0005af78",
+  "name": "tc__uldiv_stk",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "ulong divisor"
+   ],
+   [
+    8,
+    4,
+    "ulong dividend"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "D1=4(SP), D0=8(SP), falls into tc_uldiv_d0d1. Unused."
+ },
+ {
+  "entry": 372608,
+  "old_name": "seg19_05af80",
+  "name": "tc_uldiv_d0d1",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "Register unsigned divide: in D0=dividend, D1=divisor; out D0=D1=quotient. JT 0x13DA."
+ },
+ {
+  "entry": 372616,
+  "old_name": "FUN_0005af88",
+  "name": "tc__lmod_stk",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "long divisor"
+   ],
+   [
+    8,
+    4,
+    "long dividend"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "D1=4(SP), D0=8(SP), falls into tc_lmod_d0d1. Unused."
+ },
+ {
+  "entry": 372624,
+  "old_name": "seg19_05af90",
+  "name": "tc_lmod_d0d1",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0:D1",
+  "semantics": "Register signed divmod: in D0=dividend, D1=divisor; out D0=remainder (sign of dividend), D1=quotient (trunc toward 0). Preserves D2-D7. JT 0x13E2 (used by Rnd etc. for %)."
+ },
+ {
+  "entry": 372662,
+  "old_name": "FUN_0005afb6",
+  "name": "tc__ulmod_stk",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "ulong divisor"
+   ],
+   [
+    8,
+    4,
+    "ulong dividend"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "D1=4(SP), D0=8(SP), falls into tc_ulmod_d0d1. Unused."
+ },
+ {
+  "entry": 372670,
+  "old_name": "seg19_05afbe",
+  "name": "tc_ulmod_d0d1",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 4,
+  "ret_where": "D0:D1",
+  "semantics": "Register unsigned divmod: in D0=dividend, D1=divisor; out D0=remainder, D1=quotient. Preserves D2-D4. Divisor 0 -> divu exception. JT 0x13EA."
+ },
+ {
+  "entry": 372750,
+  "old_name": "seg19_05b00e",
+  "name": "tc_operator_delete",
+  "conv": "pascal",
+  "purge": 4,
+  "args": [
+   [
+    4,
+    4,
+    "void* p"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "C++ operator delete(void*): tc__new_free(p). CALLEE pops 4 bytes."
+ },
+ {
+  "entry": 372798,
+  "old_name": "seg19_05b03e",
+  "name": "tc_operator_new",
+  "conv": "pascal",
+  "purge": 4,
+  "args": [
+   [
+    4,
+    4,
+    "ulong size"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "C++ operator new(size_t): size 0 -> 2; p=tc__new_alloc(size); while p==NULL and new_handler (A5-0x1954) != NULL: call it and retry. Result in D0, CALLEE pops 4 bytes."
+ },
+ {
+  "entry": 372882,
+  "old_name": "seg19_05b092",
+  "name": "tc__run_STI",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "C++ static init: if '_STD' 0 exists -> stored at A5-0x194C and tc__run_STD registered with atexit; '_STI' 0: MoveHHi/HLock, calls A5+offset for each long in it, ReleaseResource."
+ },
+ {
+  "entry": 372980,
+  "old_name": "seg19_05b0f4",
+  "name": "tc__run_STD",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Runs C++ static destructors: calls A5+offset for each long in the '_STD' resource, then releases it."
+ },
+ {
+  "entry": 373044,
+  "old_name": "FUN_0005b134",
+  "name": "tc_CtoPstr",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "char* s"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "In-place C->Pascal string: shifts bytes right by one, s[0]=strlen&0xFF; returns s."
+ },
+ {
+  "entry": 373072,
+  "old_name": "seg20_05b150",
+  "name": "tc_PtoCstr",
+  "conv": "c",
+  "purge": 0,
+  "args": [
+   [
+    4,
+    4,
+    "uchar* s"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "D0",
+  "semantics": "In-place Pascal->C string: shifts left by one, NUL-terminates; returns s."
+ },
+ {
+  "entry": 373098,
+  "old_name": "seg20_05b16a",
+  "name": "tc_SysEnvirons",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    4,
+    "SysEnvRec* theWorld"
+   ],
+   [
+    8,
+    2,
+    "short versionRequested"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION SysEnvirons(versReq; VAR theWorld): OSErr. Uses trap A090 if implemented; else fills the 16-byte record by hand (environsVersion 2, machineType from ROM, systemVersion 0, processor, hasFPU, hasColorQD, keyboard, atDrvrVersNum, sysVRefNum via working dir 'ERIK') and returns envNotPresent -5500. Result word at 10(SP) of caller frame (slot above args)."
+ },
+ {
+  "entry": 373460,
+  "old_name": "seg20_05b2d4",
+  "name": "tc_Gestalt",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "long* response"
+   ],
+   [
+    8,
+    4,
+    "OSType selector"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION Gestalt(selector; VAR response): OSErr. If _Gestalt (A1AD) implemented: trap, *response=A0, result D0. Else built-in table for 'vers','mach','sysv','proc','fpu ','qd  ','kbd ','atlk','mmu ','ram ','lram', other -> -5551."
+ },
+ {
+  "entry": 373986,
+  "old_name": "seg20_05b4e2",
+  "name": "tc_GetPtrSize",
+  "conv": "pascal",
+  "purge": 4,
+  "args": [
+   [
+    4,
+    4,
+    "Ptr p"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "stack",
+  "semantics": "FUNCTION GetPtrSize(p): Size; negative (error) -> 0."
+ },
+ {
+  "entry": 374000,
+  "old_name": "seg20_05b4f0",
+  "name": "tc_GetHandleSize",
+  "conv": "pascal",
+  "purge": 4,
+  "args": [
+   [
+    4,
+    4,
+    "Handle h"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "stack",
+  "semantics": "FUNCTION GetHandleSize(h): Size; negative (error) -> 0."
+ },
+ {
+  "entry": 374014,
+  "old_name": "seg20_05b4fe",
+  "name": "tc_NGetTrapAddress",
+  "conv": "pascal",
+  "purge": 4,
+  "args": [
+   [
+    4,
+    2,
+    "short tTyp"
+   ],
+   [
+    6,
+    2,
+    "short trapNum"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "stack",
+  "semantics": "FUNCTION NGetTrapAddress(trapNum; tTyp: TrapType): LongInt. tTyp (byte) !=0 -> GetToolTrapAddress (A746) else GetOSTrapAddress (A346)."
+ },
+ {
+  "entry": 374034,
+  "old_name": "seg20_05b512",
+  "name": "tc_PBOpen",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBOpen(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374052,
+  "old_name": "seg20_05b524",
+  "name": "tc_PBClose",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBClose(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374070,
+  "old_name": "seg20_05b536",
+  "name": "tc_PBControl",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBControl(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374088,
+  "old_name": "seg20_05b548",
+  "name": "tc_PBGetVInfo",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBGetVInfo(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374106,
+  "old_name": "seg20_05b55a",
+  "name": "tc_PBGetEOF",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBGetEOF(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374124,
+  "old_name": "seg20_05b56c",
+  "name": "tc_PBSetEOF",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBSetEOF(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374142,
+  "old_name": "seg20_05b57e",
+  "name": "tc_PBSetFPos",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBSetFPos(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374700,
+  "old_name": "FUN_0005b7ac",
+  "name": "tc_PBOpenWD",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBOpenWD(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant (HFSDispatch A260/A660 selector 1); result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374722,
+  "old_name": "FUN_0005b7c2",
+  "name": "tc_PBCloseWD",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBCloseWD(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant (HFSDispatch A260/A660 selector 2); result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374744,
+  "old_name": "FUN_0005b7d8",
+  "name": "tc_PBHGetVol",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBHGetVol(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374762,
+  "old_name": "seg20_05b7ea",
+  "name": "tc_PBGetFCBInfo",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBGetFCBInfo(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant (HFSDispatch A260/A660 selector 8); result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374784,
+  "old_name": "seg20_05b800",
+  "name": "tc_PBGetCatInfo",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBGetCatInfo(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant (HFSDispatch A260/A660 selector 9); result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374806,
+  "old_name": "seg20_05b816",
+  "name": "tc_PBSetCatInfo",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBSetCatInfo(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant (HFSDispatch A260/A660 selector 10); result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374828,
+  "old_name": "seg20_05b82c",
+  "name": "tc_PBHGetVInfo",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBHGetVInfo(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374846,
+  "old_name": "seg20_05b83e",
+  "name": "tc_PBHOpen",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBHOpen(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374864,
+  "old_name": "seg20_05b850",
+  "name": "tc_PBHDelete",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBHDelete(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374882,
+  "old_name": "seg20_05b862",
+  "name": "tc_PBHRename",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBHRename(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374900,
+  "old_name": "seg20_05b874",
+  "name": "tc_PBHRstFLock",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBHRstFLock(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374918,
+  "old_name": "seg20_05b886",
+  "name": "tc_PBHSetFLock",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "Boolean async"
+   ],
+   [
+    6,
+    4,
+    "ParmBlkPtr pb"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION PBHSetFLock(pb; async: Boolean): OSErr. A0=pb, sync or async trap variant; result = D0.w (written to the slot above the args)."
+ },
+ {
+  "entry": 374160,
+  "old_name": "seg20_05b590",
+  "name": "tc_FSOpen",
+  "conv": "pascal",
+  "purge": 10,
+  "args": [
+   [
+    4,
+    4,
+    "short* refNum"
+   ],
+   [
+    8,
+    2,
+    "short vRefNum"
+   ],
+   [
+    10,
+    4,
+    "uchar* fileName"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION FSOpen(fileName: Str255; vRefNum; VAR refNum): OSErr. PBOpenDF (HFSDispatch sel 0x1A) with ioPermssn 0 (fsCurPerm), ioVersNum 0, ioMisc 0; if paramErr (-50) falls back to PBOpen. *refNum = ioRefNum (written even on error)."
+ },
+ {
+  "entry": 374224,
+  "old_name": "seg20_05b5d0",
+  "name": "tc_FSClose",
+  "conv": "pascal",
+  "purge": 2,
+  "args": [
+   [
+    4,
+    2,
+    "short refNum"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION FSClose(refNum): OSErr via PBClose."
+ },
+ {
+  "entry": 374250,
+  "old_name": "seg20_05b5ea",
+  "name": "tc_FSRead",
+  "conv": "pascal",
+  "purge": 10,
+  "args": [
+   [
+    4,
+    4,
+    "void* buffPtr"
+   ],
+   [
+    8,
+    4,
+    "long* count"
+   ],
+   [
+    12,
+    2,
+    "short refNum"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION FSRead(refNum; VAR count; buffPtr): OSErr. PBRead with ioReqCount=*count, ioPosMode 0 (fsAtMark), ioPosOffset 0; *count = ioActCount."
+ },
+ {
+  "entry": 374254,
+  "old_name": "seg20_05b5ee",
+  "name": "tc_FSWrite",
+  "conv": "pascal",
+  "purge": 10,
+  "args": [
+   [
+    4,
+    4,
+    "void* buffPtr"
+   ],
+   [
+    8,
+    4,
+    "long* count"
+   ],
+   [
+    12,
+    2,
+    "short refNum"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION FSWrite(refNum; VAR count; buffPtr): OSErr. PBWrite at mark; *count = ioActCount."
+ },
+ {
+  "entry": 374322,
+  "old_name": "seg20_05b632",
+  "name": "tc_GetVInfo",
+  "conv": "pascal",
+  "purge": 14,
+  "args": [
+   [
+    4,
+    4,
+    "long* freeBytes"
+   ],
+   [
+    8,
+    4,
+    "short* vRefNum"
+   ],
+   [
+    12,
+    4,
+    "uchar* volName"
+   ],
+   [
+    16,
+    2,
+    "short drvNum"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION GetVInfo(drvNum; volName; VAR vRefNum; VAR freeBytes): OSErr. PBHGetVInfo(ioVRefNum=drvNum, ioVolIndex 0); *vRefNum=ioVRefNum; *freeBytes = (((ioVAlBlkSiz>>9) * (word)ioVFrBlk) << 9) (32-bit, mulu on low words)."
+ },
+ {
+  "entry": 374388,
+  "old_name": "seg20_05b674",
+  "name": "tc_GetFInfo",
+  "conv": "pascal",
+  "purge": 10,
+  "args": [
+   [
+    4,
+    4,
+    "FInfo* fndrInfo"
+   ],
+   [
+    8,
+    2,
+    "short vRefNum"
+   ],
+   [
+    10,
+    4,
+    "uchar* fileName"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION GetFInfo(fileName; vRefNum; VAR fndrInfo): OSErr. PBGetFInfo (version 0, dirIndex 0), copies 16 bytes of ioFlFndrInfo (even on error)."
+ },
+ {
+  "entry": 374442,
+  "old_name": "seg20_05b6aa",
+  "name": "tc_GetVol",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "short* vRefNum"
+   ],
+   [
+    8,
+    4,
+    "uchar* volName"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION GetVol(volName; VAR vRefNum): OSErr via PBGetVol."
+ },
+ {
+  "entry": 374476,
+  "old_name": "seg20_05b6cc",
+  "name": "tc_SetVol",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    2,
+    "short vRefNum"
+   ],
+   [
+    6,
+    4,
+    "uchar* volName"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION SetVol(volName; vRefNum): OSErr via PBSetVol."
+ },
+ {
+  "entry": 374508,
+  "old_name": "seg20_05b6ec",
+  "name": "tc_Create",
+  "conv": "pascal",
+  "purge": 14,
+  "args": [
+   [
+    4,
+    4,
+    "OSType fileType"
+   ],
+   [
+    8,
+    4,
+    "OSType creator"
+   ],
+   [
+    12,
+    2,
+    "short vRefNum"
+   ],
+   [
+    14,
+    4,
+    "uchar* fileName"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION Create(fileName; vRefNum; creator; fileType): OSErr. PBCreate; if ok PBGetFInfo, set fdType/fdCreator, PBSetFInfo."
+ },
+ {
+  "entry": 374570,
+  "old_name": "seg20_05b72a",
+  "name": "tc_SetFInfo",
+  "conv": "pascal",
+  "purge": 10,
+  "args": [
+   [
+    4,
+    4,
+    "FInfo* fndrInfo"
+   ],
+   [
+    8,
+    2,
+    "short vRefNum"
+   ],
+   [
+    10,
+    4,
+    "uchar* fileName"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION SetFInfo(fileName; vRefNum; fndrInfo): OSErr. PBGetFInfo, overwrite 16-byte FInfo, PBSetFInfo (result of SetFInfo)."
+ },
+ {
+  "entry": 374628,
+  "old_name": "seg20_05b764",
+  "name": "tc_GetEOF",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    4,
+    "long* logEOF"
+   ],
+   [
+    8,
+    2,
+    "short refNum"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION GetEOF(refNum; VAR logEOF): OSErr via PBGetEOF; *logEOF=ioMisc (written even on error)."
+ },
+ {
+  "entry": 374662,
+  "old_name": "seg20_05b786",
+  "name": "tc_SetFPos",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "long posOff"
+   ],
+   [
+    8,
+    2,
+    "short posMode"
+   ],
+   [
+    10,
+    2,
+    "short refNum"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION SetFPos(refNum; posMode; posOff): OSErr via PBSetFPos."
+ },
+ {
+  "entry": 374936,
+  "old_name": "seg20_05b898",
+  "name": "tc_SetSoundVol",
+  "conv": "pascal",
+  "purge": 2,
+  "args": [
+   [
+    4,
+    2,
+    "short level"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "PROCEDURE SetSoundVol(level): PBControl to Sound Driver refNum -4, csCode 2, csParam=level (PB on stack, other fields uninitialised)."
+ },
+ {
+  "entry": 374970,
+  "old_name": "seg20_05b8ba",
+  "name": "tc_CountAppFiles",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "short* count"
+   ],
+   [
+    8,
+    4,
+    "short* message"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "PROCEDURE CountAppFiles(VAR message, VAR count): *count=0; if AppParmHandle (0xAEC) size>0: *message=word0, *count=word1."
+ },
+ {
+  "entry": 375006,
+  "old_name": "seg20_05b8de",
+  "name": "tc_GetAppFiles",
+  "conv": "pascal",
+  "purge": 6,
+  "args": [
+   [
+    4,
+    4,
+    "AppFile* theFile"
+   ],
+   [
+    8,
+    2,
+    "short index"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "PROCEDURE GetAppFiles(index; VAR theFile): clears fType; if 1<=index<=count copies AppParm entries 1..index into theFile (last = index-th) with entry size 8+((len+2)&~1)."
+ },
+ {
+  "entry": 375076,
+  "old_name": "seg20_05b924",
+  "name": "tc_PurgeSpace",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "long* contig"
+   ],
+   [
+    8,
+    4,
+    "long* total"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "PROCEDURE PurgeSpace(VAR total, VAR contig): *total=D0, *contig=A0 from trap A162."
+ },
+ {
+  "entry": 375096,
+  "old_name": "seg20_05b938",
+  "name": "tc_FlushInstructionCache",
+  "conv": "pascal",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "HWPriv (A198) selector 1."
+ },
+ {
+  "entry": 375104,
+  "old_name": "seg20_05b940",
+  "name": "tc_FlushDataCache",
+  "conv": "pascal",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "HWPriv (A198) selector 3."
+ },
+ {
+  "entry": 375114,
+  "old_name": "FUN_0005b94a",
+  "name": "tc__Pack2_dispatch",
+  "conv": "regs",
+  "purge": 0,
+  "args": [],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "Inserts selector D2.w under the return address and executes _Pack2 (A9E9)."
+ },
+ {
+  "entry": 375122,
+  "old_name": "seg20_05b952",
+  "name": "tc_DIBadMount",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "long evtMessage"
+   ],
+   [
+    8,
+    4,
+    "Point where"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION DIBadMount(where; evtMessage): INTEGER = Pack2 selector 0 (Disk Initialization dialog). Called by HandleEvent."
+ },
+ {
+  "entry": 375128,
+  "old_name": "seg20_05b958",
+  "name": "tc_NumToString",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    4,
+    "uchar* theString"
+   ],
+   [
+    8,
+    4,
+    "long theNum"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "PROCEDURE NumToString(theNum; VAR theString: Str255): Pack7 selector 0 (A0=str, D0=num)."
+ },
+ {
+  "entry": 375146,
+  "old_name": "seg20_05b96a",
+  "name": "tc_StripAddress",
+  "conv": "pascal",
+  "purge": 4,
+  "args": [
+   [
+    4,
+    4,
+    "Ptr addr"
+   ]
+  ],
+  "ret": 4,
+  "ret_where": "stack",
+  "semantics": "FUNCTION StripAddress(addr): Ptr; trap A055 if available (ROM85 bit6 clear), else addr & Lo3Bytes (0x31A)."
+ },
+ {
+  "entry": 375172,
+  "old_name": "seg20_05b984",
+  "name": "tc_HandToHand",
+  "conv": "pascal",
+  "purge": 4,
+  "args": [
+   [
+    4,
+    4,
+    "Handle* theHndl"
+   ]
+  ],
+  "ret": 2,
+  "ret_where": "stack",
+  "semantics": "FUNCTION HandToHand(VAR theHndl): OSErr; *theHndl = copy (A0 written even on error)."
+ },
+ {
+  "entry": 375194,
+  "old_name": "seg20_05b99a",
+  "name": "tc_GetIndString",
+  "conv": "pascal",
+  "purge": 8,
+  "args": [
+   [
+    4,
+    2,
+    "short index"
+   ],
+   [
+    6,
+    2,
+    "short strListID"
+   ],
+   [
+    8,
+    4,
+    "uchar* theString"
+   ]
+  ],
+  "ret": 0,
+  "ret_where": "D0",
+  "semantics": "PROCEDURE GetIndString(VAR theString; strListID; index): theString[0]=0; GetResource('STR#',id); if found and 1<=index<=count copies the index-th Pascal string (len+1 bytes). Resource not released/locked."
+ }
+]

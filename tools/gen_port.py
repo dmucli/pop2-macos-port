@@ -46,6 +46,10 @@ def load_index():
             f['conv'] = o['conv']
         if o and 'ret' in o:
             f['ret_override'] = o['ret']
+        if o and 'retslot' in o:
+            f['retslot'] = o['retslot']
+        if o and 'purge' in o:
+            f['purge'] = o['purge']
         f['params'] = sorted([p for p in f['params'] if 'off' in p], key=lambda p: p['off'])
     return idx
 
@@ -98,8 +102,8 @@ def gen_functions(idx, ported):
             continue
         if f['name'] in ported and f.get('conv') == 'pascal':
             # Pascal: args are popped by the callee; a result goes into the slot above them.
-            span = max([p['off'] - 4 + (2 if p['size'] <= 2 else 4) for p in f['params']] or [0])
-            rb = f.get('ret_override', f.get('ret', 0)) or 0
+            span = f.get('purge') if f.get('purge') is not None else max([p['off'] - 4 + (2 if p['size'] <= 2 else 4) for p in f['params']] or [0])
+            rb = (f.get('ret_override', f.get('ret', 0)) or 0) if f.get('retslot', True) else 0
             store = ''
             if rb == 2 or rb == 1: store = ' wr16(sp + %d, (uint16_t)r);' % span
             elif rb >= 4: store = ' wr32(sp + %d, r);' % span
@@ -110,9 +114,10 @@ def gen_functions(idx, ported):
                      % (f['name'], f['name'], ', '.join(args_read)))
         else:
             span = max([p['off'] - 4 + (2 if p['size'] <= 2 else 4) for p in f['params']] or [0])
-            span = (span + 1) & ~1
             pascal = f.get('conv') == 'pascal'
-            rb = (f.get('ret_override', f.get('ret', 0)) or 0) if pascal else 0
+            if pascal and f.get('purge') is not None: span = f['purge']
+            span = (span + 1) & ~1
+            rb = (f.get('ret_override', f.get('ret', 0)) or 0) if (pascal and f.get('retslot', True)) else 0
             slot = (2 if rb in (1, 2) else 4) if rb else 0
             body = ['uint32_t %s(%s) {' % (f['name'], plist(f))]
             body.append('    maddr sp0 = emu_sp(), sp = sp0 - %d;' % (span + slot))

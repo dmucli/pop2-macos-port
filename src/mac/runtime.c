@@ -104,7 +104,7 @@ static void report_exception(void) {
     }
     for (int r = 0; r < 8; r++) fprintf(stderr, "  D%d=%08x A%d=%08x\n", r, cpu_get(R_D0 + r), r, cpu_get(R_A0 + r));
     extern void cpu_dump_history(int n);
-    cpu_dump_history(60);
+    cpu_dump_history(getenv("POP2_HIST") ? atoi(getenv("POP2_HIST")) : 60);
     cpu_stop();
 }
 void runtime_install_exception_vectors(void) {

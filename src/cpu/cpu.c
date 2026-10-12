@@ -18,10 +18,20 @@ static void brk_check(unsigned pc) {
     extern int loader_locate(maddr a, int *seg, uint32_t *off);
     int sg; uint32_t of;
     if (!loader_locate(pc, &sg, &of) || sg != brk_seg || of != brk_off) return;
+    { extern uint64_t runtime_us(void); static long after = -1; if (after < 0) after = getenv("POP2_BREAK_AFTER_MS") ? atol(getenv("POP2_BREAK_AFTER_MS")) : 0;
+      if ((long)(runtime_us() / 1000) < after) return; }
     if (brk_count++ > 40) return;
     uint32_t sp = cpu_get(R_SP);
     fprintf(stderr, "[break] seg%d+%04x SP=%06x A6=%06x args:", sg, of, sp, cpu_get(R_A6));
     for (int i = 0; i < 12; i++) fprintf(stderr, " %04x", rd16(sp + 4 + 2 * i));
+    const char *dump = getenv("POP2_BREAK_DUMP");      /* "A5off:len" */
+    if (dump) {
+        long off = strtol(dump, NULL, 0); const char *c = strchr(dump, ':'); int len = c ? atoi(c + 1) : 16;
+        maddr a = cpu_get(R_A5) + (int32_t)off;
+        fprintf(stderr, "\n        A5%+ld:", off);
+        for (int i = 0; i < len; i++) fprintf(stderr, " %02x", rd8(a + i));
+        fprintf(stderr, " (ticks=%u)", rd32(0x16A));
+    }
     maddr p1 = rd32(sp + 4);
     fprintf(stderr, "\n        *arg0:");
     for (int i = 0; i < 16; i++) fprintf(stderr, " %04x", rd16(p1 + 2 * i));

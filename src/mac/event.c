@@ -131,10 +131,16 @@ static void T_WaitNextEvent(uint16_t w) {
 static void T_EventAvail(uint16_t w) { (void)w; maddr e = pop32(); uint16_t mask = pop16(); runtime_idle(); retbool(event_get(mask, e, 0)); }
 static void T_GetOSEvent(uint16_t w) { (void)w; int got = event_get((uint16_t)D0, A0, 1); cpu_set(R_D0, got ? 0 : (uint32_t)-1); }
 static void T_OSEventAvail(uint16_t w) { (void)w; int got = event_get((uint16_t)D0, A0, 0); cpu_set(R_D0, got ? 0 : (uint32_t)-1); }
+/* FlushEvents: D0 low word = events to remove, high word = stop mask (stop at the
+ * first event of one of these types). */
 static void T_FlushEvents(uint16_t w) {
-    (void)w; uint16_t mask = (uint16_t)D0;
-    Event tmp[QN]; int n = 0;
-    for (int i = qhead; i != qtail; i = (i + 1) % QN) if (!matches(q[i].what, mask)) tmp[n++] = q[i];
+    (void)w; uint16_t mask = (uint16_t)D0, stop = (uint16_t)(D0 >> 16);
+    Event tmp[QN]; int n = 0, stopped = 0;
+    for (int i = qhead; i != qtail; i = (i + 1) % QN) {
+        if (!stopped && matches(q[i].what, stop)) stopped = 1;
+        if (!stopped && matches(q[i].what, mask)) continue;
+        tmp[n++] = q[i];
+    }
     memcpy(q, tmp, sizeof(Event) * (size_t)n);
     qhead = 0; qtail = n;
     cpu_set(R_D0, 0);

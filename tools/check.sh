@@ -11,7 +11,7 @@ HFV=${HFV:-$ROOT/../PoP2.hfv}; [ -f "$HFV" ] || HFV=$ROOT/../PoP2.hfv
 BIN=${BIN:-$ROOT/build/pop2}
 SECS=${SECS:-35}
 CALLS=${CALLS:-30}
-OUT=${OUT:-${TMPDIR:-/tmp}/pop2-check}
+OUT=${OUT:-$ROOT/build/check}
 MOVES="right:1500,shift-right:1200,up:300,left:900,shift-left:900,down:400,up:600,right:700,shift:200,right:1600,up:300,left:2500,shift-up:300,right:300,down:300,shift:300"
 # turn a relative move list into absolute times starting at $1 ms
 moves_from() {
