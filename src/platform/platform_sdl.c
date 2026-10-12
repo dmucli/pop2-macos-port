@@ -36,6 +36,7 @@ int platform_init(int scale) {
     return 0;
 }
 void platform_shutdown(void) { if (!headless) SDL_Quit(); }
+int  platform_is_headless(void) { return headless; }
 
 void platform_present(void) {
     if (headless) return;

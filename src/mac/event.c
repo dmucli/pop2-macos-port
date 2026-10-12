@@ -79,6 +79,14 @@ void event_mouse_button(int down) {
 }
 int event_button(void) { return button_down; }
 
+/* After a native modal dialog: the releases it swallowed never arrive, so forget every
+ * held key and the mouse button. */
+void event_release_all(void) {
+    mset(LM_KeyMap, 0, 16);
+    cur_mods = 0;
+    button_down = 0;
+}
+
 /* Native (Cocoa) menus. A command with a key equivalent arrives as the Command-key
  * press the game already handles (MenuKey); one without arrives as a click in the menu
  * bar, which MenuSelect answers with the pending choice (see wm.c). */

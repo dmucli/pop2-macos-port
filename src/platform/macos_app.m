@@ -73,3 +73,62 @@ int macos_in_app_bundle(void) {
         return [[[NSBundle mainBundle] bundlePath] hasSuffix:@".app"];
     }
 }
+
+/* ---- Standard File dialogs (saved games live inside the emulated disk, not on the
+ * host file system, so these are simple native pickers over that directory) ---- */
+static NSString *macroman(const char *s) {
+    NSString *r = [[NSString alloc] initWithBytes:s length:strlen(s) encoding:NSMacOSRomanStringEncoding];
+    return r ? r : @"";
+}
+
+/* Open: choose one of names[0..n-1]. Returns the index, or -1 if cancelled. */
+int macos_choose_file(const char *prompt, const char *const *names, int n) {
+    @autoreleasepool {
+        NSAlert *a = [[NSAlert alloc] init];
+        a.messageText = (prompt && *prompt) ? macroman(prompt) : @"Open Game";
+        a.informativeText = n ? @"Choose a saved game." : @"There is no saved game yet.";
+        [a addButtonWithTitle:n ? @"Open" : @"OK"];
+        if (n) [a addButtonWithTitle:@"Cancel"];
+        NSPopUpButton *pop = nil;
+        if (n) {
+            pop = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(0, 0, 300, 26) pullsDown:NO];
+            for (int i = 0; i < n; i++) [pop addItemWithTitle:[NSString stringWithFormat:@"%d. %@", i + 1, macroman(names[i])]];
+            a.accessoryView = pop;
+        }
+        if ([a runModal] != NSAlertFirstButtonReturn || !n) return -1;
+        return (int)pop.indexOfSelectedItem;
+    }
+}
+
+/* Save: ask for a file name (HFS: at most 31 characters, no colon). Returns 1 with the
+ * name in out (Mac Roman), 0 if cancelled. exists() asks whether a name is taken. */
+int macos_ask_save_name(const char *prompt, const char *def, char *out, int outsz, int (*exists)(const char *)) {
+    @autoreleasepool {
+        for (;;) {
+            NSAlert *a = [[NSAlert alloc] init];
+            a.messageText = (prompt && *prompt) ? macroman(prompt) : @"Save Game";
+            a.informativeText = @"Name of the saved game:";
+            [a addButtonWithTitle:@"Save"];
+            [a addButtonWithTitle:@"Cancel"];
+            NSTextField *f = [[NSTextField alloc] initWithFrame:NSMakeRect(0, 0, 300, 24)];
+            f.stringValue = macroman(def ? def : "");
+            a.accessoryView = f;
+            a.window.initialFirstResponder = f;
+            if ([a runModal] != NSAlertFirstButtonReturn) return 0;
+            NSString *s = [f.stringValue stringByReplacingOccurrencesOfString:@":" withString:@"-"];
+            s = [s stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
+            if (!s.length) continue;
+            NSData *d = [s dataUsingEncoding:NSMacOSRomanStringEncoding allowLossyConversion:YES];
+            int len = (int)MIN(d.length, (NSUInteger)MIN(31, outsz - 1));
+            memcpy(out, d.bytes, (size_t)len); out[len] = 0;
+            if (exists && exists(out)) {
+                NSAlert *r = [[NSAlert alloc] init];
+                r.messageText = [NSString stringWithFormat:@"“%@” already exists. Replace it?", macroman(out)];
+                [r addButtonWithTitle:@"Replace"];
+                [r addButtonWithTitle:@"Cancel"];
+                if ([r runModal] != NSAlertFirstButtonReturn) continue;
+            }
+            return 1;
+        }
+    }
+}
