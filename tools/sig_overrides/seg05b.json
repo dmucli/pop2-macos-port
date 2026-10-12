@@ -1,0 +1,15 @@
+{
+  "Rnd": {"params": [[4, 2]]},
+
+  "TriggerDart": {"conv": "manual"},
+  "TriggerScythe": {"conv": "manual"},
+
+  "CharUnderMob": {"ret": 2},
+  "OppInfoUnderMob": {"ret": 2},
+  "IsVisibleRoomCell": {"ret": 2},
+  "SpecialMusic": {"ret": 2},
+  "ComputeBladeHitRect": {"ret": 2},
+  "seg5_027e6e": {"ret": 0},
+  "CheckScytheHit": {"ret": 0},
+  "LoadSounds": {"ret": 0}
+}
