@@ -3869,6 +3869,598 @@ uint32_t chk_ATMLoose(void) {
     emu_set_sp(sp0);
     return r;
 }
+uint32_t chk_ComputeMobRect(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(550);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_MarkMobRedraw(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(551);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AddMobObj(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(552);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_000276f6(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(553);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_CharUnderMob(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(554);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_OppInfoUnderMob(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(555);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AddGateSound(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(556);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_GetTrobRoomCell(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(557);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_GetTrobId(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(558);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_IsVisibleRoomCell(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(559);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_ATMSpikes(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(560);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_00027c78(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(561);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_seg5_027dc2(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(562);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_seg5_027e6e(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(563);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_DrawObjSpikes(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(564);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_GetSpikeIdx(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(565);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_GetSpikeMobRoomRow(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(566);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_00028124(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(567);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_MobSpikes(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(568);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_TriggerSpikes(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(569);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AnimGate(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(570);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AnimLoose(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(571);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AnimScythe(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(572);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_CheckSpikesJammed(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(573);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_DidKidEscapeOpp(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(574);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_GetCol(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(575);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_MarkRectBuf(uint32_t p4, int16_t p8, uint32_t p10) {
+    maddr sp0 = emu_sp(), sp = sp0 - 10;
+    wr32(sp + 0, (uint32_t)p4);
+    wr16(sp + 4, (uint16_t)p8);
+    wr32(sp + 6, (uint32_t)p10);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(576);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_ReadCellWithCell(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(577);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AddKidDeathSong(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(579);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_00028cc0(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(580);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AddKidScream(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(581);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_00028d38(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(582);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AddSFX(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(583);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AddSong(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(584);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_AddSound(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(585);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_CheckSnd(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(586);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_00028f8c(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(587);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_InitAmbient(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(588);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_00028ff6(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(589);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_LoadSounds(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(590);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_PlayAmbient(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(591);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_000292a2(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(592);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_seg5_029374(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(593);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_PrinceReleaseSnd(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(594);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_PrinceResetSnd(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(595);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_PrinceSetSnd(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(596);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_PrinceSndOn(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(597);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_SetCueSnd(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(598);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_SpecialMusic(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(599);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_000295f8(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(600);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_TimeForNewAmbient(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(601);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_00029860(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(602);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_seg5_02988a(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(603);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_UpdateAmbient(uint32_t p4, int16_t p8) {
+    maddr sp0 = emu_sp(), sp = sp0 - 6;
+    wr32(sp + 0, (uint32_t)p4);
+    wr16(sp + 4, (uint16_t)p8);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(604);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_UnloadSounds(int16_t p4, int16_t p6) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr16(sp + 0, (uint16_t)p4);
+    wr16(sp + 2, (uint16_t)p6);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(605);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_0002993c(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(606);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_000299d8(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(607);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_CheckScytheHit(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(608);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_ComputeBladeHitRect(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(609);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_00029c48(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(610);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_DrawScythe2(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(611);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_GetScytheHitType(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(612);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_RedrawScythe(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(613);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_0002a09a(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(614);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_ScytheBladeExtended(int16_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 2;
+    wr16(sp + 0, (uint16_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(615);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_0002a1f2(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(617);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_seg5_02a240(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(618);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_seg5_02a314(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(619);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_ConvertDirToRecDir(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(620);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_ConvertRecDirToDir(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(621);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_IncRecordedGameToNextFrame(uint32_t p4) {
+    maddr sp0 = emu_sp(), sp = sp0 - 4;
+    wr32(sp + 0, (uint32_t)p4);
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(622);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_0002a4be(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(623);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_seg5_02a4da(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(624);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_FUN_0002a4ec(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(625);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_StartPlayingRecordedGame(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(626);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_seg5_02a5c4(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(627);
+    emu_set_sp(sp0);
+    return r;
+}
+uint32_t chk_seg5_02a5e4(void) {
+    maddr sp0 = emu_sp(), sp = sp0 - 0;
+    emu_set_sp(sp);
+    uint32_t r = call68_fn_chk(628);
+    emu_set_sp(sp0);
+    return r;
+}
 uint32_t chk_DrawRoofBackWall(void) {
     maddr sp0 = emu_sp(), sp = sp0 - 0;
     emu_set_sp(sp);

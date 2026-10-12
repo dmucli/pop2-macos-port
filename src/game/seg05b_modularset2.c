@@ -133,7 +133,11 @@ static uint8_t sect_rect_ptr(maddr src1, maddr src2, maddr dst) {
 #define SP_DOWN(name, n)  maddr name##__sp = emu_sp(); emu_set_sp(name##__sp - (n))
 #define SP_UP(name)       emu_set_sp(name##__sp)
 #define WITH_DEPTH(n, call) do { SP_DOWN(dpt, n); uint32_t r__ = (call); SP_UP(dpt); return r__; } while (0)
+#ifdef PORT_CHECK_BUILD   /* check build: chk_ trampolines push the arguments themselves */
+#define CALL_A(n, call)   (call)
+#else
 #define CALL_A(n, call)   __extension__ ({ SP_DOWN(cla, n); uint32_t r2__ = (call); SP_UP(cla); r2__; })
+#endif
 #define C_PrinceSndOn(a) CALL_A(2, PrinceSndOn(a))
 #define C_PrinceSetSnd(a) CALL_A(2, PrinceSetSnd(a))
 #define C_PrinceResetSnd(a) CALL_A(2, PrinceResetSnd(a))

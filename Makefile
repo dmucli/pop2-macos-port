@@ -59,7 +59,7 @@ $(BUILD)/chk/.stamp: tools/mkcheck.py $(PORTED_SRC) src/game/gen/glue.c
 	@touch $@
 $(BUILD)/chk/%.c: $(BUILD)/chk/.stamp ;
 $(BUILD)/chk/%.o: $(BUILD)/chk/%.c $(wildcard src/*/*.h src/*.h) src/game/gen/proto.h src/game/gen/proto_chk.h
-	$(CC) $(CFLAGS) -Isrc/game -c $< -o $@
+	$(CC) $(CFLAGS) -DPORT_CHECK_BUILD -Isrc/game -c $< -o $@
 $(BUILD)/pop2check: $(BUILD)/m68kops.c $(CHK_OBJ)
 	$(CC) $(CHK_OBJ) $(LDFLAGS) -o $@
 check: $(BUILD)/pop2check

@@ -59,8 +59,12 @@
 #define ENTER(link, nregs)  FRAME(fr_, 8 + (link) + 4 * (nregs)); const maddr f = fr_ + 4 * (nregs); (void)f
 #define ENTER_NOLINK(nregs) FRAME(fr_, 4 + 4 * (nregs))
 #define RETURN(v)           do { uint32_t r_ = (uint32_t)(v); FRAME_END(fr_); return r_; } while (0)
+#ifdef PORT_CHECK_BUILD   /* check build: chk_ trampolines push the arguments themselves */
+#define CALLC(argbytes, call) (call)
+#else
 #define CALLC(argbytes, call) ({ maddr s_ = emu_sp(); emu_set_sp(s_ - (argbytes)); \
                                  uint32_t c_ = (call); emu_set_sp(s_); c_; })
+#endif
 
 /* Runtime address of a constant (string) in this code segment, given its Ghidra address. */
 static maddr S2(uint32_t ghidra_addr) {
