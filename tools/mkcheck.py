@@ -26,8 +26,15 @@ def main(out):
         if not fn.endswith('.c'):
             continue
         src = open(os.path.join(GAME, fn)).read().split('\n')
-        res, cur = [], None
+        res, cur, in_glue_macro = [], None, 0
         for line in src:
+            # glue defined through a macro (PGLUE(Name, ..., Name(...)), ARGS_GLUE(Name)):
+            # its calls must stay direct, like inside glue_* functions
+            if in_glue_macro or re.match(r'^[A-Z_]*GLUE\s*\(', line):
+                in_glue_macro += line.count('(') - line.count(')')
+                if in_glue_macro < 0: in_glue_macro = 0
+                res.append(line)
+                continue
             if line and not line[0].isspace() and not line.startswith(('#', '/', '*', '}')):
                 m = fndef.match(line)
                 if m:
