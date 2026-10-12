@@ -4,15 +4,16 @@ SDL_CF  := $(shell sdl2-config --cflags)
 SDL_LD  := $(shell sdl2-config --libs)
 CFLAGS  ?= -O2 -g
 CFLAGS  += -std=c11 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Isrc -Ithird_party/musashi $(SDL_CF)
-LDFLAGS += $(SDL_LD) -framework CoreText -framework CoreGraphics -framework CoreFoundation
+LDFLAGS += $(SDL_LD) -framework CoreText -framework CoreGraphics -framework CoreFoundation -framework Cocoa
 BUILD   := build
 
 MUSASHI := third_party/musashi
 MUSASHI_SRC := $(MUSASHI)/m68kcpu.c $(MUSASHI)/m68kdasm.c $(BUILD)/m68kops.c $(MUSASHI)/softfloat/softfloat.c
 GAME_SRC := $(wildcard src/game/*.c src/game/*/*.c)
 SRC := $(wildcard src/*.c src/mac/*.c src/cpu/*.c src/fs/*.c src/platform/*.c) $(filter-out src/game/gen/%,$(GAME_SRC)) src/game/gen/glue.c
+OBJC_SRC := $(wildcard src/platform/*.m)
 TRAPS_JSON ?= $(CURDIR)/../work/traps.json
-OBJ := $(patsubst %.c,$(BUILD)/%.o,$(SRC)) $(BUILD)/m68kcpu.o $(BUILD)/m68kdasm.o $(BUILD)/m68kops.o $(BUILD)/softfloat.o
+OBJ := $(patsubst %.c,$(BUILD)/%.o,$(SRC)) $(patsubst %.m,$(BUILD)/%.o,$(OBJC_SRC)) $(BUILD)/m68kcpu.o $(BUILD)/m68kdasm.o $(BUILD)/m68kops.o $(BUILD)/softfloat.o
 
 all: $(BUILD)/pop2
 
@@ -25,7 +26,7 @@ $(BUILD)/m68kmake: $(MUSASHI)/m68kmake.c
 	$(CC) -O1 -w -o $@ $<
 
 $(BUILD)/m68kops.c: $(BUILD)/m68kmake $(MUSASHI)/m68k_in.c
-	cd $(BUILD) && ./m68kmake . ../$(MUSASHI)/m68k_in.c
+	cd $(BUILD) && ./m68kmake . $(CURDIR)/$(MUSASHI)/m68k_in.c
 
 MCFLAGS := -O2 -g -w -I$(MUSASHI) -I$(BUILD) -DM68K_EMULATE_PMMU=M68K_OPT_OFF
 ifeq ($(HOOK),1)
@@ -44,6 +45,10 @@ $(BUILD)/softfloat.o: $(MUSASHI)/softfloat/softfloat.c
 $(BUILD)/%.o: %.c $(wildcard src/*/*.h src/*.h) src/game/gen/proto.h
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/%.o: %.m
+	@mkdir -p $(dir $@)
+	$(CC) -O2 -g -fobjc-arc -Wall -c $< -o $@
 
 $(BUILD)/pop2: $(BUILD)/m68kops.c $(OBJ)
 	$(CC) $(OBJ) $(LDFLAGS) -o $@
@@ -64,7 +69,25 @@ $(BUILD)/pop2check: $(BUILD)/m68kops.c $(CHK_OBJ)
 	$(CC) $(CHK_OBJ) $(LDFLAGS) -o $@
 check: $(BUILD)/pop2check
 
+# ---- macOS app bundle (no game data inside: it asks for the user's own disk image)
+#   make app BUILD=build/release      (release build, without the debug instruction hook)
+APP := $(BUILD)/PoP2 Port.app
+app: $(BUILD)/pop2 packaging/Info.plist
+	rm -rf "$(APP)"
+	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Frameworks" "$(APP)/Contents/Resources"
+	cp $(BUILD)/pop2 "$(APP)/Contents/MacOS/pop2"
+	cp packaging/Info.plist "$(APP)/Contents/Info.plist"
+	SDL2=$$(otool -L $(BUILD)/pop2 | awk '/libSDL2/{print $$1}'); \
+	  cp "$$SDL2" "$(APP)/Contents/Frameworks/"; chmod u+w "$(APP)/Contents/Frameworks/"*; \
+	  install_name_tool -change "$$SDL2" "@executable_path/../Frameworks/$$(basename $$SDL2)" "$(APP)/Contents/MacOS/pop2"; \
+	  install_name_tool -id "@executable_path/../Frameworks/$$(basename $$SDL2)" "$(APP)/Contents/Frameworks/$$(basename $$SDL2)"; \
+	  SDL3=$$(dirname $$(dirname $$SDL2))/../sdl3/lib/libSDL3.dylib; \
+	  if [ -f "$$SDL3" ]; then cp -L "$$SDL3" "$(APP)/Contents/Frameworks/libSDL3.dylib"; chmod u+w "$(APP)/Contents/Frameworks/libSDL3.dylib"; \
+	    install_name_tool -id "@loader_path/libSDL3.dylib" "$(APP)/Contents/Frameworks/libSDL3.dylib"; fi
+	codesign --force --deep -s - "$(APP)"
+	@echo "built $(APP)"
+
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all clean check
+.PHONY: all clean check app
