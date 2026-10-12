@@ -127,6 +127,26 @@ static void checked_runner(NativeFn fn, const char *name, maddr entry) {
     checking = 0;
 }
 
+/* ---- POP2_CODEGUARD=<seg>: report the first ported function whose call changes that
+ * code segment (catches stray native writes through stale pointers). Debug only. */
+static int guard_seg = -1; static uint8_t *guard_copy; static maddr guard_base; static uint32_t guard_len;
+static void guard_snapshot(void) {
+    maddr h = loader_segment_handle((int16_t)guard_seg);
+    if (!h || !rd32(h)) { guard_len = 0; return; }
+    guard_base = rd32(h) & ADDR_MASK; guard_len = rd32(guard_base - 16);
+    guard_copy = realloc(guard_copy, guard_len); memcpy(guard_copy, M + guard_base, guard_len);
+}
+static void guard_runner(NativeFn fn, const char *name, maddr entry) {
+    fn();
+    if (guard_len && memcmp(guard_copy, M + guard_base, guard_len)) {
+        for (uint32_t i = 0; i < guard_len; i++) if (guard_copy[i] != M[guard_base + i]) {
+            fprintf(stderr, "[codeguard] %s changed seg%d+%04x (%02x -> %02x)\n", name, guard_seg, i, guard_copy[i], M[guard_base + i]);
+            break;
+        }
+        guard_snapshot();
+    }
+}
+
 static int in_list(const char *list, const char *name) {
     if (!list) return 0;
     size_t n = strlen(name);
@@ -142,6 +162,7 @@ static void on_segment_loaded(int16_t seg, maddr code) {
             if (w != hook_word[i]) orig_word[i] = w;
             wr16(code + fn_info[i].segoff, hook_word[i]);
         }
+    if (seg == guard_seg) guard_snapshot();
 }
 
 void native_init(void) {
@@ -167,6 +188,7 @@ void native_init(void) {
         cpu_hook_runner = checked_runner;
         fprintf(stderr, "native: differential checking, %d calls per function\n", check_budget);
     }
+    if (getenv("POP2_CODEGUARD")) { guard_seg = atoi(getenv("POP2_CODEGUARD")); cpu_hook_runner = guard_runner; }
     if (n) fprintf(stderr, "native: %d ported functions active\n", n);
 }
 

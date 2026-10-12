@@ -390,6 +390,20 @@ void cpu_stop(void) { cpu_running = 0; m68k_end_timeslice(); }
 void cpu_init(void) {
     m68k_init();
     m68k_set_cpu_type(M68K_CPU_TYPE_68020);
+    {   /* Route every F-line opcode ($Fxxx) to the line-F exception (our thunks and native
+         * hooks). Musashi decodes some coprocessor patterns (cpGEN/cpScc/cpBcc/... with
+         * cpID != 0) as silent no-ops on a 68020, which would skip hook words like $FE86.
+         * The game uses no coprocessor instructions. The line-F handler is the one most
+         * F-line opcodes already map to. */
+        extern void (*m68ki_instruction_jump_table[0x10000])(void);
+        void (*best)(void) = NULL; int best_n = 0;
+        for (unsigned op = 0xF000; op <= 0xFFFF && best_n < 0x800; op += 0x40) {
+            void (*h)(void) = m68ki_instruction_jump_table[op]; int n = 0;
+            for (unsigned o = 0xF000; o <= 0xFFFF; o++) if (m68ki_instruction_jump_table[o] == h) n++;
+            if (n > best_n) { best_n = n; best = h; }
+        }
+        for (unsigned o = 0xF000; o <= 0xFFFF; o++) m68ki_instruction_jump_table[o] = best;
+    }
     m68k_linea_hook = linea_hook;
     m68k_linef_hook = linef_hook;
     m68k_pulse_reset();
