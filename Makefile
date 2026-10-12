@@ -72,6 +72,7 @@ check: $(BUILD)/pop2check
 # ---- macOS app bundle (no game data inside: it asks for the user's own disk image)
 #   make app BUILD=build/release      (release build, without the debug instruction hook)
 APP := $(BUILD)/PoP2 Port.app
+SDL3_LIBDIR ?= $(shell (command -v pkg-config >/dev/null && pkg-config --variable=libdir sdl3) 2>/dev/null || echo /opt/homebrew/opt/sdl3/lib)
 app: $(BUILD)/pop2 packaging/Info.plist
 	rm -rf "$(APP)"
 	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Frameworks" "$(APP)/Contents/Resources"
@@ -81,8 +82,9 @@ app: $(BUILD)/pop2 packaging/Info.plist
 	  cp "$$SDL2" "$(APP)/Contents/Frameworks/"; chmod u+w "$(APP)/Contents/Frameworks/"*; \
 	  install_name_tool -change "$$SDL2" "@executable_path/../Frameworks/$$(basename $$SDL2)" "$(APP)/Contents/MacOS/pop2"; \
 	  install_name_tool -id "@executable_path/../Frameworks/$$(basename $$SDL2)" "$(APP)/Contents/Frameworks/$$(basename $$SDL2)"; \
-	  SDL3=$$(dirname $$(dirname $$SDL2))/../sdl3/lib/libSDL3.dylib; \
-	  if [ -f "$$SDL3" ]; then cp -L "$$SDL3" "$(APP)/Contents/Frameworks/libSDL3.dylib"; chmod u+w "$(APP)/Contents/Frameworks/libSDL3.dylib"; \
+	  if strings "$$SDL2" | grep -q libSDL3; then \
+	    SDL3="$(SDL3_LIBDIR)/libSDL3.dylib"; [ -f "$$SDL3" ] || { echo "sdl2-compat needs SDL3: $$SDL3 not found (set SDL3_LIBDIR)"; exit 1; }; \
+	    cp -L "$$SDL3" "$(APP)/Contents/Frameworks/libSDL3.dylib"; chmod u+w "$(APP)/Contents/Frameworks/libSDL3.dylib"; \
 	    install_name_tool -id "@loader_path/libSDL3.dylib" "$(APP)/Contents/Frameworks/libSDL3.dylib"; fi
 	codesign --force --deep -s - "$(APP)"
 	@echo "built $(APP)"

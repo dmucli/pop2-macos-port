@@ -3,6 +3,7 @@
 #include "../fs/vfs.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 static uint32_t jt_base;     /* A5 + CurJTOffset */
 static maddr seg_handles[256];
@@ -57,12 +58,19 @@ static void T_LoadSeg(uint16_t w) {
 }
 static void T_UnloadSeg(uint16_t w) { (void)w; pop32(); }
 
+/* ExitToShell never returns (ported C code may be inside an endless game loop): close
+ * files, flush the writable overlay and end the process. A checker child process ends
+ * silently without writing anything. */
+int runtime_is_check_child;
 void ExitToShell(void) {
+    if (runtime_is_check_child) _exit(0);
     fprintf(stderr, "ExitToShell\n");
     { extern void cpu_print_native_stats(void); if (getenv("POP2_NATIVE_STATS")) cpu_print_native_stats(); }
     fm_close_all();
     vfs_flush_all();
-    cpu_stop();
+    { extern uint64_t cpu_instr_count; fprintf(stderr, "exited after %llu instructions\n", (unsigned long long)cpu_instr_count); }
+    { extern void platform_shutdown(void); platform_shutdown(); }
+    exit(0);
 }
 static void T_ExitToShell(uint16_t w) { (void)w; ExitToShell(); }
 
