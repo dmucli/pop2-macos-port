@@ -1475,11 +1475,15 @@ uint32_t GetMobTypeItem(int16_t type, int16_t n) {
     return found;
 }
 
-/* 00026b28: load the current object (spec, id) of a cell of the CalcBlue room */
+/* 00026b28: load the current object (spec, id) of a cell of the CalcBlue room.
+ * D0 = the tile id in the low word (callers such as FUN_00015400 use it as the object id),
+ * the high word of the tile's address above it. */
 uint32_t GetOS(int16_t cell) {
     W32(gObjSpec, R32(R32(gRoomSpecs) + (int32_t)cell * 4));
-    W16(gObjId, R16(R32(gRoomTiles) + (int32_t)cell * 2));
-    return 0;
+    uint32_t a = R32(gRoomTiles) + (uint32_t)((int32_t)cell * 2);
+    uint16_t id = RU16(a);
+    W16(gObjId, id);
+    return (a & 0xFFFF0000u) | id;
 }
 
 /* 00026b68: animate every mob, then drop the dead ones */

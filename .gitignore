@@ -5,3 +5,6 @@ __pycache__/
 *.sla
 src/game/gen/glue.c
 src/game/gen/proto.h
+src/game/gen/chk.c
+src/game/gen/chk_names.txt
+src/game/gen/proto_chk.h

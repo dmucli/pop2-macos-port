@@ -36,6 +36,7 @@ int platform_init(int scale) {
     return 0;
 }
 void platform_shutdown(void) { if (!headless) SDL_Quit(); }
+int  platform_is_headless(void) { return headless; }
 
 void platform_present(void) {
     if (headless) return;
@@ -151,8 +152,10 @@ static void toggle_fullscreen(void) {
     SDL_SetWindowFullscreen(win, (f & SDL_WINDOW_FULLSCREEN_DESKTOP) ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP);
 }
 
+void platform_menu_update(void);
 void platform_poll(void) {
     if (headless) return;
+    platform_menu_update();
     static uint32_t last;
     uint32_t now = SDL_GetTicks();
     if (now == last) return;
@@ -193,3 +196,6 @@ void platform_set_cursor(maddr c) { (void)c; }
 /* Native menus are provided by platform_menu.m when built with Cocoa; these are fallbacks. */
 __attribute__((weak)) void platform_menu_sync(void) {}
 __attribute__((weak)) int platform_menu_pending(uint32_t *r) { *r = 0; return 0; }
+__attribute__((weak)) int platform_menu_has_pending(void) { return 0; }
+__attribute__((weak)) void platform_menu_update(void) {}
+void platform_toggle_fullscreen(void) { if (!headless) toggle_fullscreen(); }
