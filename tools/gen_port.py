@@ -49,6 +49,7 @@ def load_index():
         if o and 'params' in o:
             f['params'] = [{'off': p[0], 'size': p[1]} for p in o['params']]
         if o and 'conv' in o:
+            f['orig_conv'] = f.get('conv')     # e.g. a Pascal function given hand-written glue
             f['conv'] = o['conv']
         if o and 'ret' in o:
             f['ret_override'] = o['ret']
@@ -82,14 +83,26 @@ def plist(f, with_types=True):
         return 'void' if with_types else ''
     return ', '.join((ctype(p['size']) + ' ' if with_types else '') + 'p%d' % p['off'] for p in f['params'])
 
+def result_slot(f):
+    """Bytes of the Pascal result slot the caller pushes (0 for C functions). A Pascal
+    function given hand-written glue keeps the slot of the index even if its "ret"
+    override says D0 is not meaningful."""
+    if f.get('conv') == 'pascal':
+        rb = (f.get('ret_override', f.get('ret', 0)) or 0) if f.get('retslot', True) else 0
+    elif f.get('orig_conv') == 'pascal':
+        rb = (f.get('ret') or 0) if f.get('retslot', True) else 0
+        if f.get('ret_override'): rb = f['ret_override']
+    else:
+        return 0
+    return (2 if rb in (1, 2) else 4) if rb else 0
+
 def trampoline(f, i, cname, callfn):
     """C function that pushes the arguments like the original caller and calls the 68k entry."""
     span = max([p['off'] - 4 + (2 if p['size'] <= 2 else 4) for p in f['params']] or [0])
-    pascal = f.get('conv') == 'pascal'
+    pascal = 'pascal' in (f.get('conv'), f.get('orig_conv'))
     if pascal and f.get('purge') is not None: span = f['purge']
     span = (span + 1) & ~1
-    rb = (f.get('ret_override', f.get('ret', 0)) or 0) if (pascal and f.get('retslot', True)) else 0
-    slot = (2 if rb in (1, 2) else 4) if rb else 0
+    slot = result_slot(f)
     body = ['uint32_t %s(%s) {' % (cname, plist(f))]
     body.append('    maddr sp0 = emu_sp(), sp = sp0 - %d;' % (span + slot))
     for p in f['params']:
@@ -136,6 +149,10 @@ def gen_functions(idx, ported):
         if f.get('conv') == 'manual' and f['name'] in ported:
             # register-convention routine: the port supplies `void glue_Name(void)` itself
             c.append('void glue_%s(void);' % f['name'])
+            if f.get('orig_conv') != 'regs':   # stack arguments: checked through the 68k entry too
+                chk.extend(trampoline(f, i, 'chk_' + f['name'], 'call68_fn_chk'))
+                chk_h.append('uint32_t chk_%s(%s);' % (f['name'], plist(f)))
+                chk_names.append(f['name'])
             continue
         if f['name'] in ported and f.get('conv') == 'pascal':
             # Pascal: args are popped by the callee; a result goes into the slot above them.
@@ -163,11 +180,10 @@ def gen_functions(idx, ported):
         if f.get('ret_override') is not None: ret = f['ret_override']
         # bytes the original caller pushes: the arguments (+ the Pascal result slot)
         span = max([p['off'] - 4 + (2 if p['size'] <= 2 else 4) for p in f['params']] or [0])
-        pascal = f.get('conv') == 'pascal'
+        pascal = 'pascal' in (f.get('conv'), f.get('orig_conv'))
         if pascal and f.get('purge') is not None: span = f['purge']
         span = (span + 1) & ~1
-        rb = (f.get('ret_override', f.get('ret', 0)) or 0) if (pascal and f.get('retslot', True)) else 0
-        span += (2 if rb in (1, 2) else 4) if rb else 0
+        span += result_slot(f)
         c.append('    {"%s", %d, 0x%05x, %d, %s, %d, %d, %d},' % (f['name'], f['seg'], f['segoff'],
                                                        f['jt'] if f['jt'] else 0, glue, ret, span,
                                                        1 if f.get('nocheck') else 0))

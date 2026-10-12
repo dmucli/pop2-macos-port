@@ -50,6 +50,8 @@ static const struct { int32_t a5off; uint32_t stride, byte, count; } check_ignor
     { -0x11e4, 16, 15, 100 },
 };
 static int check_ignored(maddr a) {
+    /* the interrupt-level stack: dead scratch space, zeroed before each use */
+    if (a >= IRQ_STACK_TOP - IRQ_STACK_SIZE && a < IRQ_STACK_TOP) return 1;
     for (size_t i = 0; i < sizeof check_ignore / sizeof check_ignore[0]; i++) {
         maddr t = rd32(g_a5 + check_ignore[i].a5off) & ADDR_MASK;
         if (!t || a < t || a >= t + check_ignore[i].stride * check_ignore[i].count) continue;
