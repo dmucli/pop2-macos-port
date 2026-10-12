@@ -57,10 +57,7 @@ void time_run_tasks(uint64_t now) {
         wr32(task + 10, 0);
         maddr fn = rd32(task + 6);
         if (fn) {
-            uint32_t regs[15];
-            for (int r = 0; r < 15; r++) regs[r] = cpu_get(r);
-            regs[R_A0] = fn; regs[R_A1] = task;
-            cpu_call_regs(fn, regs, NULL);
+            cpu_call_irq(fn, 0, fn, task, 0, NULL);
         }
     }
     /* VBL tasks run once per tick */
@@ -95,10 +92,7 @@ void vbl_tick(void) {
         wr16(task + 10, (uint16_t)(c - 1));
         if (c - 1 == 0) {
             maddr fn = rd32(task + 6);
-            uint32_t regs[15];
-            for (int r = 0; r < 15; r++) regs[r] = cpu_get(r);
-            regs[R_A0] = task;
-            cpu_call_regs(fn, regs, NULL);
+            cpu_call_irq(fn, 0, task, 0, 0, NULL);
         }
     }
 }

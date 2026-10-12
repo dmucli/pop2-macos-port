@@ -199,6 +199,26 @@ uint32_t cpu_call_regs(maddr pc, const uint32_t *regs16, uint32_t *a0) {
     if (a0) *a0 = ra0;
     return rd0;
 }
+/* What interrupt-level code sees of the interrupted program (registers, stack contents
+ * below SP) is undefined on a real Mac. Making it fixed keeps runs independent of
+ * whether the interrupted code is original 68k or ported C, which keeps the
+ * differential checker exact and deterministic runs reproducible. */
+static int irq_depth;
+uint32_t cpu_call_irq(maddr pc, uint32_t d0, maddr a0, maddr a1, int nargs, const uint32_t *args) {
+    uint32_t regs[15] = {0};
+    regs[R_D0] = d0; regs[R_A0] = a0; regs[R_A1] = a1;
+    regs[R_A5] = rd32(0x904);                       /* CurrentA5 */
+    maddr sp0 = cpu_get(R_SP);
+    if (irq_depth++ == 0) {
+        mset(IRQ_STACK_TOP - IRQ_STACK_SIZE, 0, IRQ_STACK_SIZE);
+        cpu_set(R_SP, IRQ_STACK_TOP);
+    }
+    for (int i = 0; i < nargs; i++) push32(args[i]);
+    uint32_t r = cpu_call_regs(pc, regs, NULL);
+    irq_depth--;
+    cpu_set(R_SP, sp0);
+    return r;
+}
 uint32_t cpu_call(maddr pc, uint32_t *a0) {
     uint32_t regs[15];
     for (int r = 0; r < 15; r++) regs[r] = cpu_get(r);

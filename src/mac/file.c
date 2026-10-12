@@ -69,10 +69,7 @@ static VNode *pb_target(maddr pb, uint32_t dirid, uint32_t *parid, char *leaf) {
 static void complete(maddr pb, int async) {
     maddr comp = rd32(pb + ioCompletion);
     if (async && comp) {
-        uint32_t regs[15] = {0};
-        for (int r = 0; r < 15; r++) regs[r] = cpu_get(r);
-        regs[R_A0] = pb; regs[R_D0] = (uint32_t)(int32_t)(int16_t)rd16(pb + ioResult);
-        cpu_call_regs(comp, regs, NULL);
+        cpu_call_irq(comp, (uint32_t)(int32_t)(int16_t)rd16(pb + ioResult), pb, 0, 0, NULL);
     }
 }
 

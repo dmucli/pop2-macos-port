@@ -17,7 +17,7 @@ OBJ := $(patsubst %.c,$(BUILD)/%.o,$(SRC)) $(BUILD)/m68kcpu.o $(BUILD)/m68kdasm.
 all: $(BUILD)/pop2
 
 # Regenerate glue whenever ported sources or the function index change.
-src/game/gen/glue.c src/game/gen/proto.h: tools/gen_port.py tools/fn_index.json $(wildcard tools/sig_overrides.json) $(filter-out src/game/gen/%,$(GAME_SRC))
+src/game/gen/glue.c src/game/gen/proto.h: tools/gen_port.py tools/fn_index.json $(wildcard tools/sig_overrides/*.json) $(filter-out src/game/gen/%,$(GAME_SRC))
 	python3 tools/gen_port.py $(TRAPS_JSON)
 
 $(BUILD)/m68kmake: $(MUSASHI)/m68kmake.c

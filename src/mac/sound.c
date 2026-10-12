@@ -174,10 +174,8 @@ static void call_user(Chan *k, Cmd c) {
     if (!routine) return;
     maddr cmdp = NewPtrClear(8);
     wr16(cmdp, c.cmd); wr16(cmdp + 2, c.p1); wr32(cmdp + 4, c.p2);
-    uint32_t sp = cpu_get(R_SP);
-    push32(k->chan); push32(cmdp);
-    cpu_call(routine, NULL);
-    cpu_set(R_SP, sp);
+    uint32_t args[2] = { k->chan, cmdp };
+    cpu_call_irq(routine, 0, 0, 0, 2, args);
     DisposePtr(cmdp);
 }
 
@@ -261,10 +259,8 @@ static void service_double_buffer(Chan *k) {
         /* ask for a refill: doubleBack(chan, doubleBuffer) */
         maddr back = rd32(h + 20);
         if (back) {
-            uint32_t sp = cpu_get(R_SP);
-            push32(k->chan); push32(buf);
-            cpu_call(back, NULL);
-            cpu_set(R_SP, sp);
+            uint32_t args[2] = { k->chan, buf };
+            cpu_call_irq(back, 0, 0, 0, 2, args);
         }
         k->db_next ^= 1;
     }

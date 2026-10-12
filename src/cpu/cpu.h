@@ -39,6 +39,10 @@ extern maddr trap_ret;                    /* where execution resumes after a nat
 uint32_t cpu_call(maddr pc, uint32_t *a0);
 /* Same, but with explicit initial register values (used for Time Manager / VBL tasks). */
 uint32_t cpu_call_regs(maddr pc, const uint32_t *regs16, uint32_t *a0);
+/* Interrupt-level call (Time Manager/VBL tasks, sound callbacks, I/O completion):
+ * runs on the dedicated interrupt stack with fixed registers (D0 = d0, A0/A1 given,
+ * A5 = CurrentA5, everything else 0). args are pushed in order (args[0] first). */
+uint32_t cpu_call_irq(maddr pc, uint32_t d0, maddr a0, maddr a1, int nargs, const uint32_t *args);
 
 /* ---- traps ---- */
 typedef void (*TrapFn)(uint16_t trapword);

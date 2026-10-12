@@ -47,3 +47,5 @@ void   c_to_pstr(const char *s, maddr p);
 #define SCREEN_BASE     0x00E00000u     /* 8-bit framebuffer (up to 1 MB) */
 #define THUNK_BASE      0x00F80000u     /* native-call thunks: one F-line word + RTS each */
 #define THUNK_COUNT     0x1000u
+#define IRQ_STACK_TOP   0x00FF0000u     /* stack for interrupt-level code (tasks, callbacks) */
+#define IRQ_STACK_SIZE  0x00008000u     /* zeroed before each outermost interrupt-level call */
