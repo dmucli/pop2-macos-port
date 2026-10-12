@@ -197,13 +197,23 @@ def gen_traps(traps_json):
         rs = info.get('retsize') or 0
         ret = info.get('return', 'void')
         params = []
+        outs = []    # Out<reg>: pointer argument receiving a register after the trap
         for i, a in enumerate(args):
-            if a.get('register') and not str(a['register']).startswith(('A', 'D')):
+            r = str(a.get('register') or '')
+            if r.startswith('Out<'):
+                params.append(('uint32_t', 'a%d' % i, dict(a, register=None, out=r[4:6])))
+                outs.append(('a%d' % i, r[4:6]))
+                continue
+            if a.get('register') and not r.startswith(('A', 'D')):
                 continue
             params.append(('uint32_t' if (a.get('stack') or 4) == 4 or a.get('register') else 'int16_t', 'a%d' % i, a))
         sig = ', '.join('%s %s' % (ty, nm) for ty, nm, _ in params) or 'void'
         body = []
-        if regbased and not selector:
+        if name == 'FlushEvents':
+            # the trap takes D0 = stopMask << 16 | eventMask (the Pascal glue packs them)
+            body += ['    tb_begin();', '    cpu_set(R_D0, (uint32_t)(uint16_t)a1 << 16 | (uint16_t)a0);',
+                     '    tb_trap(0x%04X);' % word, '    uint32_t r = cpu_get(R_D0);', '    tb_end();', '    return r;']
+        elif regbased and not selector:
             body.append('    tb_begin();')
             for ty, nm, a in params:
                 r = a.get('register')
@@ -212,6 +222,8 @@ def gen_traps(traps_json):
             body.append('    tb_trap(0x%04X);' % word)
             rr = info.get('returnreg') or 'D0'
             body.append('    uint32_t r = cpu_get(R_%s);' % rr[:2])
+            for nm, reg in outs:
+                body.append('    if (%s) wr32(%s, cpu_get(R_%s));' % (nm, nm, reg))
             body.append('    tb_end();')
             body.append('    return r;')
         else:

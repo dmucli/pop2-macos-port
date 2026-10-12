@@ -353,6 +353,7 @@ static inline uint32_t _GetOSEvent(uint32_t a0, uint32_t a1) {
 }
 static inline uint32_t _FlushEvents(int16_t a0, int16_t a1) {
     tb_begin();
+    cpu_set(R_D0, (uint32_t)(uint16_t)a1 << 16 | (uint16_t)a0);
     tb_trap(0xA032);
     uint32_t r = cpu_get(R_D0);
     tb_end();
@@ -412,11 +413,12 @@ static inline uint32_t _SetDateTime(uint32_t a0) {
     tb_end();
     return r;
 }
-static inline uint32_t _Delay(uint32_t a0) {
+static inline uint32_t _Delay(uint32_t a0, uint32_t a1) {
     tb_begin();
     cpu_set(R_A0, (uint32_t)a0);
     tb_trap(0xA03B);
     uint32_t r = cpu_get(R_D0);
+    if (a1) wr32(a1, cpu_get(R_D0));
     tb_end();
     return r;
 }
@@ -626,17 +628,21 @@ static inline uint32_t _MaxBlockSys(void) {
     tb_end();
     return r;
 }
-static inline uint32_t _PurgeSpace(void) {
+static inline uint32_t _PurgeSpace(uint32_t a0, uint32_t a1) {
     tb_begin();
     tb_trap(0xA062);
     uint32_t r = cpu_get(R_D0);
+    if (a0) wr32(a0, cpu_get(R_D0));
+    if (a1) wr32(a1, cpu_get(R_A0));
     tb_end();
     return r;
 }
-static inline uint32_t _PurgeSpaceSys(void) {
+static inline uint32_t _PurgeSpaceSys(uint32_t a0, uint32_t a1) {
     tb_begin();
     tb_trap(0xA462);
     uint32_t r = cpu_get(R_D0);
+    if (a0) wr32(a0, cpu_get(R_D0));
+    if (a1) wr32(a1, cpu_get(R_A0));
     tb_end();
     return r;
 }
@@ -777,17 +783,19 @@ static inline uint32_t _GetZone(void) {
     tb_end();
     return r;
 }
-static inline uint32_t _MaxMem(void) {
+static inline uint32_t _MaxMem(uint32_t a0) {
     tb_begin();
     tb_trap(0xA11D);
     uint32_t r = cpu_get(R_D0);
+    if (a0) wr32(a0, cpu_get(R_A0));
     tb_end();
     return r;
 }
-static inline uint32_t _MaxMemSys(void) {
+static inline uint32_t _MaxMemSys(uint32_t a0) {
     tb_begin();
     tb_trap(0xA51D);
     uint32_t r = cpu_get(R_D0);
+    if (a0) wr32(a0, cpu_get(R_A0));
     tb_end();
     return r;
 }
@@ -4890,11 +4898,12 @@ static inline uint32_t _SecondsToDate(uint32_t a0, uint32_t a1) {
     tb_end();
     return r;
 }
-static inline uint32_t _DateToSeconds(uint32_t a0) {
+static inline uint32_t _DateToSeconds(uint32_t a0, uint32_t a1) {
     tb_begin();
     cpu_set(R_A0, (uint32_t)a0);
     tb_trap(0xA9C7);
     uint32_t r = cpu_get(R_D0);
+    if (a1) wr32(a1, cpu_get(R_D0));
     tb_end();
     return r;
 }
@@ -5131,12 +5140,13 @@ static inline uint32_t _PtrToXHand(uint32_t a0, uint32_t a1, uint32_t a2) {
     tb_end();
     return r;
 }
-static inline uint32_t _PtrToHand(uint32_t a0, uint32_t a2) {
+static inline uint32_t _PtrToHand(uint32_t a0, uint32_t a1, uint32_t a2) {
     tb_begin();
     cpu_set(R_A0, (uint32_t)a0);
     cpu_set(R_D0, (uint32_t)a2);
     tb_trap(0xA9E3);
     uint32_t r = cpu_get(R_D0);
+    if (a1) wr32(a1, cpu_get(R_A0));
     tb_end();
     return r;
 }
@@ -7155,8 +7165,9 @@ static inline uint32_t _NumToString(uint32_t a0, uint32_t a1) {
     tb_end();
     return r;
 }
-static inline uint32_t _StringToNum(uint32_t a0) {
+static inline uint32_t _StringToNum(uint32_t a0, uint32_t a1) {
     tb_begin();
+    push32(a1);
     push16(0x0001);
     cpu_set(R_A0, (uint32_t)a0);
     tb_trap(0xA9EE);
@@ -9021,9 +9032,10 @@ static inline uint32_t _FlushFonts(void) {
     tb_end();
     return r;
 }
-static inline uint32_t _Gestalt(uint32_t a0) {
+static inline uint32_t _Gestalt(uint32_t a0, uint32_t a1) {
     tb_begin();
     push16(0);
+    push32(a1);
     cpu_set(R_D0, 0x00000000);
     cpu_set(R_D0, (uint32_t)a0);
     tb_trap(0xA1AD);
@@ -9042,9 +9054,10 @@ static inline uint32_t _NewGestalt(uint32_t a0, uint32_t a1) {
     tb_end();
     return r;
 }
-static inline uint32_t _ReplaceGestalt(uint32_t a0, uint32_t a1) {
+static inline uint32_t _ReplaceGestalt(uint32_t a0, uint32_t a1, uint32_t a2) {
     tb_begin();
     push16(0);
+    push32(a2);
     cpu_set(R_D0, 0x00000400);
     cpu_set(R_D0, (uint32_t)a0);
     cpu_set(R_A0, (uint32_t)a1);
