@@ -1131,6 +1131,10 @@ uint32_t TweakKidShpList(void) {
 uint32_t VisibleAbovePiece(int16_t room, int16_t cell) {
     ENTER_LINK(0, 12);
     int16_t d3 = 0;
+    /* "clr.w D3": PieceAboveRightId returns its caller's D3 when there is no room above,
+     * so the emulated D3 must hold the original's value during the calls (restored at exit) */
+    uint32_t saved_d3 = cpu_get(R_D3);
+    cpu_set(R_D3, saved_d3 & 0xffff0000u);
     int16_t d4 = (int16_t)PieceAboveId(room, cell);
     if (S16(IsSpace(d4)) != 0 || d4 == 5 || d4 == 6 || (d4 == 3 && LVL_NUM() == 0xd)) {
         d3 = 1;
@@ -1138,6 +1142,7 @@ uint32_t VisibleAbovePiece(int16_t room, int16_t cell) {
         int16_t d5 = (int16_t)PieceAboveRightId(room, cell);
         if (S16(IsSpace(d5)) != 0 || d5 == 5 || d5 == 6 || (d4 == 3 && LVL_NUM() == 0xd)) d3 = 1;
     }
+    cpu_set(R_D3, saved_d3);
     return (uint16_t)d3;
 }
 

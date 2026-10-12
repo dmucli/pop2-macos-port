@@ -1,0 +1,14 @@
+{
+  "DoSoundVB": {"conv": "manual"},
+  "configWriteText__DUsUsUsUse": {"conv": "manual", "ret": 2},
+
+  "EndVoice": {"ret": 0},
+  "FreeSampleFromSlot": {"ret": 0},
+  "LoadSamples": {"ret": 2},
+  "RegisterSounds": {"ret": 2},
+  "StartFilePlayback": {"ret": 2},
+  "GetSoundTime": {"ret": 4},
+  "configQuit": {"ret": 0},
+
+  "__dt__8fileSpecDv": {"params": [[4, 4]]}
+}
