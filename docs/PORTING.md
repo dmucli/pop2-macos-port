@@ -141,4 +141,74 @@ the first differing addresses). Functions listed as "never called" were not exer
 review those translations against the disassembly with extra care.
 Bisect with `POP2_NATIVE_EXCLUDE=Name1,Name2` or `POP2_NATIVE_ONLY=...`.
 
+`check.sh` uses the **check build** (`build/pop2check`, built automatically): a copy of
+the ported sources in which every call to a ported function goes through a generated
+`chk_Name` trampoline that pushes the arguments and enters the function through its 68k
+entry, so calls between ported functions are checked too. (The normal build calls C
+directly.) The first `CALLS` (default 30) calls of each function per scenario are checked.
+
+Getting more coverage:
+* `CALLS=300 tools/check.sh` checks more calls.
+* `VMS=1800000 tools/check.sh intro` runs the attract mode long enough to play the demo
+  recordings (gates, loose floors, spikes, guards...). `SECS` raises the host time limit.
+* Your own scenario: `POP2_INPUT="ms:key:dur,..."` (see `tools/check.sh` for examples;
+  keys like `cmd-n`, `shift-right`, `space`). Saved games: `POP2_OPENFILE`.
+* A temporary test hook calling a function with chosen arguments is fine while you work;
+  do not commit it.
+
+## 10. Rules learned from the first units (read before starting)
+
+**Stack fidelity.** 68k code reached from your function (callees, Toolbox callbacks, the
+Mohawk file layer which stores stack addresses in globals, the music code which copies
+uninitialised stack bytes into its queues) must run at the same SP as in the original.
+Every ported function that calls anything (game function, trap wrapper, call_ptr) starts
+with one of:
+
+```c
+ENTRY_LINK(FN_Name, link, regbytes);   // "link.w A6,#-link; movem.l <n regs>,-(SP)": regbytes = 4*n
+ENTRY_NOLINK(FN_Name, regbytes);       // no link (regbytes may be 0)
+```
+
+They reserve the original entry frame (and, when called from C, the caller's argument
+bytes) and release it on every return automatically. `a6` (ENTRY_LINK) is the original
+frame pointer: locals whose address escapes live at their original offsets `a6 - k`.
+**Never** reserve or push argument bytes at a call site yourself: callees do it.
+
+**Arguments written by the callee.** Some originals modify their own argument slots
+(`subq.w #5,(8,A6)`), which belong to the caller's frame and are compared. Mark such
+functions `"conv": "manual"` and write `void glue_Name(void)`: read the args at
+`emu_sp()+0...` (the hook already popped the return address), call the C function, write
+the final values back into the slots, `emu_set_d0(r)`. C callers call the C function.
+
+**Return values.** The checker compares D0 (masked by the return size). Where the
+original leaves garbage in D0 (or in its high word), check every caller in Ghidra and set
+`"ret": 0` or `"ret": 2` in your override file. Otherwise reproduce D0 exactly, including
+odd values. A register read before being set (the original returns whatever the caller had
+in D4) may be reproduced with `cpu_get(R_D4)`, with a comment.
+
+**Functions that never return** in a run (main loops, `main_`): `"nocheck": true`.
+
+**Other conventions**
+* Constants in the code segment (PC-relative strings): `fn_address(FN_SomeFnInSameSeg) + delta`.
+* Pascal function pointers (e.g. the SectRect/UnionRect addresses cached at A5-0x1f58..):
+  push the result slot, then the args; read the result at the slot after `call68_addr`
+  (which restores SP). Booleans come back in the high byte of the word.
+* A `char` argument pushed with `move.b` occupies the high byte of its word: pass `c << 8`.
+* Variadic library calls (`tc_sprintf`): `call_ptr(JT_ADDR(FN_tc_sprintf), "lll", ...)`.
+* The original sometimes pushes an extra, unused word to a callee: don't change the
+  callee's prototype; push it yourself around the call if the stack layout matters.
+* Signature fixes for functions *outside* your unit are allowed; two override files
+  disagreeing on the same key is a build error (agree with the existing one).
+
+**Ghidra pitfalls**
+* 68020 memory-indirect operands (`([bd,An],Xn,od)`): Ghidra sometimes shows them as
+  pre-indexed when the extension word says post-indexed (`*(An+bd) + Xn + od`). Check
+  the extension words.
+* Switch tables are often not recovered (`UNRECOVERED_JUMPTABLE`), and some case bodies
+  are not even disassembled: read the table and the bytes (`read_memory`) yourself.
+* Decompiled `switch` fall-through and shared tails can be wrong: follow the branches.
+
+**Known checker limits** (not your bug, mention them if you hit them): the MIDI note queue
+padding byte is ignored by design; interrupt-level code runs on its own stack.
+
 Pilot example: `src/game/seg23_rooftops.c`.
