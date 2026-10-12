@@ -796,7 +796,7 @@ uint32_t DrawHorse(uint32_t pt, int16_t plane) {
     W16(a4 + 0x18, 0x6310);
     W32(a4 + 0x1e, R32(gCellRect));
     W32(a4 + 0x22, R32(gCellRect + 4));
-    return y;
+    return 0x1e;            /* D0 holds the last "moveq #0x1e" (offset of the rect copy) */
 }
 
 /* 0001bd6c: draw a flask (piece 1): table proc for the background, then the flask and
