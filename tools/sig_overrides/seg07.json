@@ -1,0 +1,22 @@
+{
+  "XWithinMiddleOfCell": {"conv": "manual"},
+  "YWithinMiddleOfCell": {"conv": "manual"},
+  "RuinChangeCrevices": {"conv": "manual"},
+
+  "CharCanSeeOpp": {"ret": 2},
+  "ChompAgain": {"ret": 2},
+
+  "FUN_0003120e": {"ret": 0},
+  "HeadGoToDest": {"ret": 0},
+  "seg7_031a04": {"ret": 0},
+  "FUN_00031e2e": {"ret": 0},
+  "SnakeComeOutOfHole": {"ret": 0},
+  "SnakeUpdateOppInfo": {"ret": 0},
+  "DrawRuinBackWall": {"ret": 0},
+  "FUN_00032756": {"ret": 0},
+  "DrawRuinCrevice": {"ret": 0},
+  "FUN_00032dde": {"ret": 0},
+  "DrawRuinGateMovable": {"ret": 0},
+  "FUN_00033186": {"ret": 0},
+  "RuinSetCreviceRevealed": {"ret": 0}
+}
