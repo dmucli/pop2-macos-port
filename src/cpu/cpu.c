@@ -22,7 +22,7 @@ static void brk_check(unsigned pc) {
       if ((long)(runtime_us() / 1000) < after) return; }
     if (brk_count++ > 40) return;
     uint32_t sp = cpu_get(R_SP);
-    fprintf(stderr, "[break] seg%d+%04x SP=%06x A6=%06x args:", sg, of, sp, cpu_get(R_A6));
+    fprintf(stderr, "[break] seg%d+%04x SP=%06x A6=%06x D0=%08x A0=%08x args:", sg, of, sp, cpu_get(R_A6), cpu_get(R_D0), cpu_get(R_A0));
     for (int i = 0; i < 12; i++) fprintf(stderr, " %04x", rd16(sp + 4 + 2 * i));
     const char *dump = getenv("POP2_BREAK_DUMP");      /* "A5off:len" */
     if (dump) {
@@ -31,6 +31,16 @@ static void brk_check(unsigned pc) {
         fprintf(stderr, "\n        A5%+ld:", off);
         for (int i = 0; i < len; i++) fprintf(stderr, " %02x", rd8(a + i));
         fprintf(stderr, " (ticks=%u)", rd32(0x16A));
+    }
+    {   /* return address and A6 frame chain */
+        int s2; uint32_t o2; maddr ra = rd32(sp), a6 = cpu_get(R_A6);
+        fprintf(stderr, "\n        ret:");
+        if (loader_locate(ra, &s2, &o2)) fprintf(stderr, " seg%d+%04x", s2, o2); else fprintf(stderr, " %06x", ra);
+        for (int i = 0; i < 10 && a6 && a6 < 0x1000000; i++) {
+            ra = rd32(a6 + 4);
+            if (loader_locate(ra, &s2, &o2)) fprintf(stderr, " <- seg%d+%04x", s2, o2); else fprintf(stderr, " <- %06x", ra);
+            maddr n6 = rd32(a6); if (n6 <= a6) break; a6 = n6;
+        }
     }
     maddr p1 = rd32(sp + 4);
     fprintf(stderr, "\n        *arg0:");

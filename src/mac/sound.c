@@ -62,7 +62,12 @@ static uint16_t master_l = 0x100, master_r = 0x100;
 uint32_t sound_frames_mixed;
 static float sound_peak;
 
-static uint32_t now_ms(void) { return SDL_GetTicks(); }
+/* Sound timing follows the runtime clock (virtual in deterministic mode). */
+uint64_t runtime_us(void);
+extern int runtime_deterministic;
+static uint32_t now_ms(void) { return (uint32_t)(runtime_us() / 1000u); }
+/* One step of a synchronous wait: real sleep only when time is real. */
+static void wait_slice(void) { if (!runtime_deterministic) platform_wait_ms(2); runtime_idle(); }
 
 /* ------------------------------------------------------------ mixer -- */
 static void free_sample(Sample *s) { free(s->pcm); memset(s, 0, sizeof *s); }
@@ -266,8 +271,6 @@ static void service_double_buffer(Chan *k) {
 }
 
 /* In deterministic mode there is no audio device: consume audio by virtual time. */
-extern int runtime_deterministic;
-uint64_t runtime_us(void);
 static void virtual_audio(void) {
     static uint64_t last; static float buf[2 * 4096];
     uint64_t now = runtime_us();
@@ -341,7 +344,7 @@ static void T_SndDisposeChannel(uint16_t w) {
     if (!k) { ret16((uint16_t)-205); return; }
     if (!quiet) {   /* wait for the queue to drain */
         uint32_t t0 = now_ms();
-        while ((k->qn || k->busy_buffer || k->playing) && now_ms() - t0 < 5000 && cpu_running) { sound_service(); platform_wait_ms(2); runtime_idle(); }
+        while ((k->qn || k->busy_buffer || k->playing) && now_ms() - t0 < 5000 && cpu_running) { sound_service(); wait_slice(); }
     }
     lock();
     k->used = 0; free_sample(&k->cur); free_sample(&k->installed);
@@ -396,7 +399,7 @@ static void T_SndPlay(uint16_t w) {
     sound_service();
     if (!async) {
         uint32_t t0 = now_ms();
-        while ((k->qn || k->busy_buffer) && now_ms() - t0 < 30000 && cpu_running) { sound_service(); platform_wait_ms(2); runtime_idle(); }
+        while ((k->qn || k->busy_buffer) && now_ms() - t0 < 30000 && cpu_running) { sound_service(); wait_slice(); }
     }
     if (tmpchan) { lock(); k->used = 0; free_sample(&k->cur); free_sample(&k->installed); unlock(); free(k->queue); DisposePtr(tmpchan); }
     ret16(0);

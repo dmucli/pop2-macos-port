@@ -14,7 +14,7 @@ int loader_locate(maddr a, int *seg, uint32_t *off) {
         maddr h = seg_handles[i];
         if (!h || !rd32(h)) continue;
         maddr p = rd32(h);
-        uint32_t sz = GetHandleSize(h);
+        uint32_t sz = rd32((p & ADDR_MASK) - 16);   /* block size, read directly: no MemErr side effect */
         if (a >= p && a < p + sz) { *seg = i; *off = a - p; return 1; }
     }
     return 0;

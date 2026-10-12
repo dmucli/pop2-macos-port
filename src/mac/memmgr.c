@@ -128,7 +128,19 @@ static int valid_block(maddr p) {
     return (rd8(p - HDR + 12) & MF_USED) != 0;
 }
 
-void mm_set_memerr(int16_t e) { wr16(LM_MemErr, (uint16_t)e); }
+/* POP2_MEMERR_LOG=1: report every Memory Manager error with the trap and its caller. */
+void mm_set_memerr(int16_t e) {
+    static int log = -1;
+    if (log < 0) log = getenv("POP2_MEMERR_LOG") != NULL;
+    if (e && log) {
+        extern uint16_t cur_trap_word; extern uint32_t cpu_get(int r);
+        extern int loader_locate(maddr a, int *seg, uint32_t *off);
+        int sg = 0; uint32_t of = 0; maddr pc = cpu_get(16);
+        loader_locate(pc, &sg, &of);
+        fprintf(stderr, "[memerr] %d trap %04X at seg%d+%04x A0=%06x\n", e, cur_trap_word, sg, of, cpu_get(8));
+    }
+    wr16(LM_MemErr, (uint16_t)e);
+}
 
 /* ---------------- pointers ---------------- */
 maddr mm_new_ptr_in(int h, uint32_t size, int clear) {
@@ -213,6 +225,9 @@ maddr NewEmptyHandle(void) {
 static int valid_handle(maddr hnd) { return hnd && heap_of(hnd & ADDR_MASK) >= 0; }
 
 void DisposeHandle(maddr hnd) {
+    /* DisposeHandle(NULL) is a harmless no-op with noErr on the real Memory Manager; the
+     * Mohawk memory library relies on it when freeing an entry whose block was purged. */
+    if (!(hnd & ADDR_MASK)) { mm_set_memerr(0); return; }
     if (!valid_handle(hnd)) { mm_set_memerr(-109); return; }
     hnd &= ADDR_MASK;
     maddr p = rd32(hnd) & ADDR_MASK;
