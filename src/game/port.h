@@ -57,7 +57,7 @@ static inline maddr port_peek(maddr a) { if ((a & ADDR_MASK) - 0x168u < 6u) runt
 #define FRAME_END(name)    emu_set_sp(name##__sp)
 
 /* ---- calling original 68k functions / Toolbox traps ---- */
-typedef struct { const char *name; int seg; uint32_t segoff; int jt_a5off; void (*glue)(void); int ret_bytes; int arg_bytes; } FnInfo;
+typedef struct { const char *name; int seg; uint32_t segoff; int jt_a5off; void (*glue)(void); int ret_bytes; int arg_bytes; int nocheck; } FnInfo;
 extern const FnInfo fn_info[];
 uint32_t call68_fn(int fn_index);              /* args already on the emulated stack */
 uint32_t call68_addr(maddr addr);              /* call 68k code at an emulated address */

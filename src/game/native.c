@@ -76,7 +76,8 @@ static void report_diff(int fi, maddr sp_after, uint32_t d0_c, uint32_t d0_68k) 
 
 static void checked_runner(NativeFn fn, const char *name, maddr entry) {
     int fi = fn_index_of(name);
-    if (checking || fi < 0 || check_count[fi] >= check_budget) { fn(); return; }
+    /* "nocheck" (sig override): functions that never return in a run (main loops) */
+    if (checking || fi < 0 || fn_info[fi].nocheck || check_count[fi] >= check_budget) { fn(); return; }
     check_count[fi]++;
     checking = 1;
     entry_g = entry;
@@ -217,6 +218,11 @@ uint32_t call_ptr(maddr fn, const char *fmt, ...) {
     return r;
 }
 
+/* Check build: a ported function called from C through its 68k entry (hook + checker). */
+uint32_t call68_fn_chk(int i) {
+    if (fn_info[i].jt_a5off) return cpu_call(g_a5 + fn_info[i].jt_a5off, NULL);
+    return cpu_call(fn_address(i), NULL);
+}
 uint32_t call68_fn(int i) {
     if (native_enabled[i]) {           /* a ported function reached through a trampoline */
         fprintf(stderr, "call68_fn: %s is native\n", fn_info[i].name);

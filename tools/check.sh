@@ -8,7 +8,8 @@
 set -u
 ROOT=${0:A:h:h}
 HFV=${HFV:-$ROOT/../PoP2.hfv}; [ -f "$HFV" ] || HFV=$ROOT/../PoP2.hfv
-BIN=${BIN:-$ROOT/build/pop2}
+BIN=${BIN:-$ROOT/build/pop2check}   # check build: calls between ported functions are checked too
+[ "$BIN" = "$ROOT/build/pop2check" ] && { make -s -C $ROOT -j8 HOOK=1 check >/dev/null || exit 1; }
 SECS=${SECS:-600}          # host-time safety limit; runs end at virtual time VMS
 VMS=${VMS:-120000}
 CALLS=${CALLS:-30}

@@ -48,7 +48,23 @@ $(BUILD)/%.o: %.c $(wildcard src/*/*.h src/*.h) src/game/gen/proto.h
 $(BUILD)/pop2: $(BUILD)/m68kops.c $(OBJ)
 	$(CC) $(OBJ) $(LDFLAGS) -o $@
 
+# ---- check build: calls between ported functions go through their 68k entry (see tools/mkcheck.py)
+PORTED_SRC := $(filter-out src/game/gen/%,$(wildcard src/game/*.c))
+CHK_GAME   := $(patsubst src/game/%.c,$(BUILD)/chk/%.o,$(PORTED_SRC))
+CHK_OBJ    := $(filter-out $(patsubst %.c,$(BUILD)/%.o,$(PORTED_SRC)),$(OBJ)) $(CHK_GAME) $(BUILD)/src/game/gen/chk.o
+src/game/gen/chk.c src/game/gen/proto_chk.h: src/game/gen/glue.c
+$(BUILD)/chk/.stamp: tools/mkcheck.py $(PORTED_SRC) src/game/gen/glue.c
+	@mkdir -p $(BUILD)/chk
+	python3 tools/mkcheck.py $(BUILD)/chk
+	@touch $@
+$(BUILD)/chk/%.c: $(BUILD)/chk/.stamp ;
+$(BUILD)/chk/%.o: $(BUILD)/chk/%.c $(wildcard src/*/*.h src/*.h) src/game/gen/proto.h src/game/gen/proto_chk.h
+	$(CC) $(CFLAGS) -Isrc/game -c $< -o $@
+$(BUILD)/pop2check: $(BUILD)/m68kops.c $(CHK_OBJ)
+	$(CC) $(CHK_OBJ) $(LDFLAGS) -o $@
+check: $(BUILD)/pop2check
+
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all clean
+.PHONY: all clean check
