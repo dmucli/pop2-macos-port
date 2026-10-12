@@ -1,0 +1,32 @@
+{
+  "BridgeGetCharCol": {"conv": "manual"},
+  "MarkBridgeForCol": {"conv": "manual"},
+  "CaveClearFlawFromPieceBelow": {"conv": "manual"},
+  "CaveMoveSquishingGate": {"conv": "manual"},
+
+  "ComputeBloodRGB": {"params": [[4, 2], [6, 2], [8, 2]]},
+
+  "FUN_00034212": {"ret": 2},
+  "FUN_000351a4": {"ret": 2},
+  "TriggerCaveBars": {"ret": 2},
+  "FUN_00037550": {"ret": 2},
+
+  "BridgeCheckBreak": {"ret": 0},
+  "MarkBrgFloorsForChars": {"ret": 0},
+  "FUN_000345fe": {"ret": 0},
+  "seg8_034698": {"ret": 0},
+  "ATMBrgFloor": {"ret": 0},
+  "SaveUnderCarpet": {"ret": 0},
+  "DrawObjCarpet": {"ret": 0},
+  "SetupCarpet": {"ret": 0},
+  "Sitting": {"ret": 0},
+  "FUN_0003546e": {"ret": 0},
+  "DrawCaveBackWall": {"ret": 0},
+  "FUN_000357f2": {"ret": 0},
+  "DrawCaveDart": {"ret": 0},
+  "DrawCaveGateMovable": {"ret": 0},
+  "seg8_0360d8": {"ret": 0},
+  "DrawCaveLavaBubbles": {"ret": 0},
+  "CheckDartHit": {"ret": 0},
+  "CheckLavaBoil": {"ret": 0}
+}

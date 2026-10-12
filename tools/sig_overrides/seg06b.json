@@ -1,0 +1,16 @@
+{
+  "RemoveOppFromRoom": {"conv": "manual"},
+  "PresetOppBanks": {"conv": "manual"},
+
+  "UpdateOppInfo": {"ret": 2},
+  "IsTimeToGenOpp": {"ret": 2},
+  "IsOppGenPtWithTumbleOn": {"ret": 2},
+  "FUN_0002ed6a": {"ret": 2},
+  "FUN_0002e9c2": {"ret": 0},
+  "AutoCtrl": {"ret": 0},
+  "seg6_02f5a0": {"ret": 0},
+  "seg6_02fba2": {"ret": 0},
+  "seg6_02fdf2": {"ret": 0},
+  "TestStrike": {"ret": 0},
+  "GetCharStrikeRanges": {"ret": 0}
+}
