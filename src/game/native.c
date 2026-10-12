@@ -199,6 +199,10 @@ uint32_t call68_fn(int i) {
     if (native_enabled[i]) {           /* a ported function reached through a trampoline */
         fprintf(stderr, "call68_fn: %s is native\n", fn_info[i].name);
     }
+    /* Like the original "jsr off(A5)": through the jump table when the function has a
+     * slot, so an unloaded segment is brought in by the _LoadSeg trap (THINK C patches
+     * it, and the trap advances the deterministic clock exactly like the original). */
+    if (fn_info[i].jt_a5off) return cpu_call(g_a5 + fn_info[i].jt_a5off, NULL);
     return cpu_call(fn_address(i), NULL);
 }
 
