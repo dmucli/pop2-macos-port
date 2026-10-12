@@ -3,6 +3,7 @@
 #include "../fs/vfs.h"
 #include "../cpu/trapinfo.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 /* SFReply: good(1) copy(1) fType(4) vRefNum(2) version(2) fName(Str63) */
 static void reply_for(maddr reply, VNode *n, uint32_t dir, const char *name) {
@@ -27,6 +28,11 @@ void stdfile_dispatch(uint16_t sel) {
             maddr reply = pop32(); pop32(); maddr types = pop32(); int16_t nt = pops16(); pop32(); pop32(); pop32();
             uint32_t dir = fm_default_dir();
             VNode *best = NULL;
+            const char *want = getenv("POP2_OPENFILE");
+            if (want) {
+                best = vfs_lookup(dir, want);
+                if (best) { fprintf(stderr, "[stdfile] SFGetFile -> %s (POP2_OPENFILE)\n", best->name); reply_for(reply, best, dir, best->name); break; }
+            }
             for (int i = 1; ; i++) {
                 VNode *n = vfs_child_index(dir, i);
                 if (!n) break;

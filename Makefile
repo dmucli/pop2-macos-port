@@ -11,7 +11,7 @@ MUSASHI := third_party/musashi
 MUSASHI_SRC := $(MUSASHI)/m68kcpu.c $(MUSASHI)/m68kdasm.c $(BUILD)/m68kops.c $(MUSASHI)/softfloat/softfloat.c
 GAME_SRC := $(wildcard src/game/*.c src/game/*/*.c)
 SRC := $(wildcard src/*.c src/mac/*.c src/cpu/*.c src/fs/*.c src/platform/*.c) $(filter-out src/game/gen/%,$(GAME_SRC)) src/game/gen/glue.c
-TRAPS_JSON ?= ../work/traps.json
+TRAPS_JSON ?= $(CURDIR)/../work/traps.json
 OBJ := $(patsubst %.c,$(BUILD)/%.o,$(SRC)) $(BUILD)/m68kcpu.o $(BUILD)/m68kdasm.o $(BUILD)/m68kops.o $(BUILD)/softfloat.o
 
 all: $(BUILD)/pop2

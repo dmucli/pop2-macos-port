@@ -3,3 +3,5 @@ build/
 __pycache__/
 .DS_Store
 *.sla
+src/game/gen/glue.c
+src/game/gen/proto.h

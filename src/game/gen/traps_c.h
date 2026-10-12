@@ -218,6 +218,13 @@ static inline uint32_t _FreeMem(void) {
     tb_end();
     return r;
 }
+static inline uint32_t _FreeMemSys(void) {
+    tb_begin();
+    tb_trap(0xA41C);
+    uint32_t r = cpu_get(R_D0);
+    tb_end();
+    return r;
+}
 static inline uint32_t _DisposePtr(uint32_t a0) {
     tb_begin();
     cpu_set(R_A0, (uint32_t)a0);
@@ -428,6 +435,14 @@ static inline uint32_t _ReserveMem(uint32_t a0) {
     tb_end();
     return r;
 }
+static inline uint32_t _ReserveMemSys(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_D0, (uint32_t)a0);
+    tb_trap(0xA440);
+    uint32_t r = cpu_get(R_D0);
+    tb_end();
+    return r;
+}
 static inline uint32_t _PBSetFLock(uint32_t a0) {
     tb_begin();
     cpu_set(R_A0, (uint32_t)a0);
@@ -509,10 +524,26 @@ static inline uint32_t _CompactMem(uint32_t a0) {
     tb_end();
     return r;
 }
+static inline uint32_t _CompactMemSys(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_D0, (uint32_t)a0);
+    tb_trap(0xA44C);
+    uint32_t r = cpu_get(R_D0);
+    tb_end();
+    return r;
+}
 static inline uint32_t _PurgeMem(uint32_t a0) {
     tb_begin();
     cpu_set(R_D0, (uint32_t)a0);
     tb_trap(0xA04D);
+    uint32_t r = cpu_get(R_D0);
+    tb_end();
+    return r;
+}
+static inline uint32_t _PurgeMemSys(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_D0, (uint32_t)a0);
+    tb_trap(0xA44D);
     uint32_t r = cpu_get(R_D0);
     tb_end();
     return r;
@@ -588,9 +619,23 @@ static inline uint32_t _MaxBlock(void) {
     tb_end();
     return r;
 }
+static inline uint32_t _MaxBlockSys(void) {
+    tb_begin();
+    tb_trap(0xA461);
+    uint32_t r = cpu_get(R_D0);
+    tb_end();
+    return r;
+}
 static inline uint32_t _PurgeSpace(void) {
     tb_begin();
     tb_trap(0xA062);
+    uint32_t r = cpu_get(R_D0);
+    tb_end();
+    return r;
+}
+static inline uint32_t _PurgeSpaceSys(void) {
+    tb_begin();
+    tb_trap(0xA462);
     uint32_t r = cpu_get(R_D0);
     tb_end();
     return r;
@@ -739,6 +784,13 @@ static inline uint32_t _MaxMem(void) {
     tb_end();
     return r;
 }
+static inline uint32_t _MaxMemSys(void) {
+    tb_begin();
+    tb_trap(0xA51D);
+    uint32_t r = cpu_get(R_D0);
+    tb_end();
+    return r;
+}
 static inline uint32_t _NewPtr(uint32_t a0) {
     tb_begin();
     cpu_set(R_D0, (uint32_t)a0);
@@ -747,10 +799,58 @@ static inline uint32_t _NewPtr(uint32_t a0) {
     tb_end();
     return r;
 }
+static inline uint32_t _NewPtrClear(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_D0, (uint32_t)a0);
+    tb_trap(0xA31E);
+    uint32_t r = cpu_get(R_A0);
+    tb_end();
+    return r;
+}
+static inline uint32_t _NewPtrSys(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_D0, (uint32_t)a0);
+    tb_trap(0xA51E);
+    uint32_t r = cpu_get(R_A0);
+    tb_end();
+    return r;
+}
+static inline uint32_t _NewPtrSysClear(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_D0, (uint32_t)a0);
+    tb_trap(0xA71E);
+    uint32_t r = cpu_get(R_A0);
+    tb_end();
+    return r;
+}
 static inline uint32_t _NewHandle(uint32_t a0) {
     tb_begin();
     cpu_set(R_D0, (uint32_t)a0);
     tb_trap(0xA122);
+    uint32_t r = cpu_get(R_A0);
+    tb_end();
+    return r;
+}
+static inline uint32_t _NewHandleClear(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_D0, (uint32_t)a0);
+    tb_trap(0xA322);
+    uint32_t r = cpu_get(R_A0);
+    tb_end();
+    return r;
+}
+static inline uint32_t _NewHandleSys(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_D0, (uint32_t)a0);
+    tb_trap(0xA522);
+    uint32_t r = cpu_get(R_A0);
+    tb_end();
+    return r;
+}
+static inline uint32_t _NewHandleSysClear(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_D0, (uint32_t)a0);
+    tb_trap(0xA722);
     uint32_t r = cpu_get(R_A0);
     tb_end();
     return r;
@@ -767,6 +867,14 @@ static inline uint32_t _RecoverHandle(uint32_t a0) {
     tb_begin();
     cpu_set(R_A0, (uint32_t)a0);
     tb_trap(0xA128);
+    uint32_t r = cpu_get(R_A0);
+    tb_end();
+    return r;
+}
+static inline uint32_t _RecoverHandleSys(uint32_t a0) {
+    tb_begin();
+    cpu_set(R_A0, (uint32_t)a0);
+    tb_trap(0xA528);
     uint32_t r = cpu_get(R_A0);
     tb_end();
     return r;
@@ -790,6 +898,13 @@ static inline uint32_t _PtrZone(uint32_t a0) {
 static inline uint32_t _NewEmptyHandle(void) {
     tb_begin();
     tb_trap(0xA166);
+    uint32_t r = cpu_get(R_A0);
+    tb_end();
+    return r;
+}
+static inline uint32_t _NewEmptyHandleSys(void) {
+    tb_begin();
+    tb_trap(0xA566);
     uint32_t r = cpu_get(R_A0);
     tb_end();
     return r;

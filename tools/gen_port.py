@@ -29,8 +29,15 @@ def load_index():
     for f in idx:
         if f['name'] in RESERVED:
             f['name'] += '_'
+    ov = {}
     ov_path = os.path.join(HERE, 'sig_overrides.json')
-    ov = json.load(open(ov_path)) if os.path.exists(ov_path) else {}
+    if os.path.exists(ov_path):
+        ov.update(json.load(open(ov_path)))
+    ov_dir = os.path.join(HERE, 'sig_overrides')
+    if os.path.isdir(ov_dir):
+        for fn in sorted(os.listdir(ov_dir)):
+            if fn.endswith('.json'):
+                ov.update(json.load(open(os.path.join(ov_dir, fn))))
     for f in idx:
         o = ov.get(f['name'])
         if o and 'params' in o:
@@ -85,20 +92,38 @@ def gen_functions(idx, ported):
         for p in f['params']:
             o = p['off'] - 4
             args_read.append('(int16_t)rd16(sp + %d)' % o if p['size'] <= 2 else 'rd32(sp + %d)' % o)
-        if f['name'] in ported:
+        if f.get('conv') == 'manual':
+            # register-convention routine: the port supplies `void glue_Name(void)` itself
+            c.append('void glue_%s(void);' % f['name'])
+            continue
+        if f['name'] in ported and f.get('conv') == 'pascal':
+            # Pascal: args are popped by the callee; a result goes into the slot above them.
+            span = max([p['off'] - 4 + (2 if p['size'] <= 2 else 4) for p in f['params']] or [0])
+            rb = f.get('ret_override', f.get('ret', 0)) or 0
+            store = ''
+            if rb == 2 or rb == 1: store = ' wr16(sp + %d, (uint16_t)r);' % span
+            elif rb >= 4: store = ' wr32(sp + %d, r);' % span
+            c.append('static void glue_%s(void) { maddr sp = emu_sp(); uint32_t r = %s(%s);%s emu_set_sp(sp + %d); emu_set_d0(r); }'
+                     % (f['name'], f['name'], ', '.join(args_read), store, span))
+        elif f['name'] in ported:
             c.append('static void glue_%s(void) { maddr sp = emu_sp(); (void)sp; emu_set_d0(%s(%s)); }'
                      % (f['name'], f['name'], ', '.join(args_read)))
         else:
             span = max([p['off'] - 4 + (2 if p['size'] <= 2 else 4) for p in f['params']] or [0])
             span = (span + 1) & ~1
+            pascal = f.get('conv') == 'pascal'
+            rb = (f.get('ret_override', f.get('ret', 0)) or 0) if pascal else 0
+            slot = (2 if rb in (1, 2) else 4) if rb else 0
             body = ['uint32_t %s(%s) {' % (f['name'], plist(f))]
-            body.append('    maddr sp0 = emu_sp(), sp = sp0 - %d;' % span)
+            body.append('    maddr sp0 = emu_sp(), sp = sp0 - %d;' % (span + slot))
             for p in f['params']:
                 o = p['off'] - 4
                 body.append('    %s(sp + %d, (%s)p%d);' % ('wr16' if p['size'] <= 2 else 'wr32', o,
                                                          'uint16_t' if p['size'] <= 2 else 'uint32_t', p['off']))
             body.append('    emu_set_sp(sp);')
             body.append('    uint32_t r = call68_fn(%d);' % i)
+            if slot == 2: body.append('    r = rd16(sp + %d);' % span)
+            elif slot == 4: body.append('    r = rd32(sp + %d);' % span)
             body.append('    emu_set_sp(sp0);')
             body.append('    return r;')
             body.append('}')
@@ -106,7 +131,7 @@ def gen_functions(idx, ported):
     c.append('')
     c.append('const FnInfo fn_info[FN_COUNT] = {')
     for f in idx:
-        glue = 'glue_' + f['name'] if f['name'] in ported else 'NULL'
+        glue = 'glue_' + f['name'] if (f['name'] in ported or f.get('conv') == 'manual') else 'NULL'
         ret = f.get('ret', 4)
         if f.get('ret_override') is not None: ret = f['ret_override']
         c.append('    {"%s", %d, 0x%05x, %d, %s, %d},' % (f['name'], f['seg'], f['segoff'],
@@ -191,6 +216,15 @@ def gen_traps(traps_json):
         if v.get('dispatcher_root') or v.get('pop') is None and not v.get('regbased'):
             continue
         emit(v['name'], v, int(k, 16))
+        # OS traps whose flag bits select variants (NewPtrClear = A31E, NewHandleSys = A522, ...)
+        if v.get('variants'):
+            base = int(k, 16)
+            flags = {'Clear': 0x0200, 'Sys': 0x0400, 'SysClear': 0x0600}
+            for var in v['variants']:
+                if var == v['name']: continue
+                suffix = var[len(v['name']):] if var.startswith(v['name']) else None
+                if suffix in flags:
+                    emit(var, v, base | flags[suffix])
     for v in t['variants']:
         emit(v['name'], v, v['trap'], v['selector'], v['loc'])
     open(os.path.join(GEN, 'traps_c.h'), 'w').write('\n'.join(out) + '\n')

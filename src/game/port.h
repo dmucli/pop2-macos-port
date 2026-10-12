@@ -63,6 +63,13 @@ void tb_begin(void);
 void tb_trap(uint16_t word);
 void tb_end(void);
 
+/* Function pointers: the original code refers to functions through their jump-table
+ * entry (A5 + offset). JT_ADDR(FN_Name) is that address; call_ptr() calls whatever an
+ * emulated function pointer points to, pushing C-convention args described by fmt
+ * ('w' = 16-bit, 'l' = 32-bit), e.g. call_ptr(p, "wl", 5, addr). */
+#define JT_ADDR(fn)  ((maddr)(g_a5 + fn_info[fn].jt_a5off))
+uint32_t call_ptr(maddr fn, const char *fmt, ...);
+
 /* Signed views of uniform return values */
 #define S16(x) ((int16_t)(x))
 #define S32(x) ((int32_t)(x))

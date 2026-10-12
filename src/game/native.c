@@ -156,6 +156,20 @@ maddr fn_address(int i) {
 
 uint32_t call68_addr(maddr addr) { return cpu_call(addr, NULL); }
 
+#include <stdarg.h>
+uint32_t call_ptr(maddr fn, const char *fmt, ...) {
+    va_list ap; va_start(ap, fmt);
+    int n = (int)strlen(fmt);
+    uint32_t vals[16];
+    for (int i = 0; i < n && i < 16; i++) vals[i] = va_arg(ap, uint32_t);
+    va_end(ap);
+    maddr sp0 = emu_sp();
+    for (int i = n - 1; i >= 0; i--) { if (fmt[i] == 'w') push16((uint16_t)vals[i]); else push32(vals[i]); }
+    uint32_t r = call68_addr(fn);
+    emu_set_sp(sp0);
+    return r;
+}
+
 uint32_t call68_fn(int i) {
     if (native_enabled[i]) {           /* a ported function reached through a trampoline */
         fprintf(stderr, "call68_fn: %s is native\n", fn_info[i].name);

@@ -4,6 +4,7 @@
 #include "m68k.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 void platform_poll(void);
@@ -129,6 +130,25 @@ static void snapshot(void) {
     fclose(f);
 }
 
+/* Test-only: POP2_TEST_POKE="A5off:size:value,..." writes A5-relative words/longs
+ * once the application globals exist (debugging aid for automated scenarios). */
+static void test_pokes(void) {
+    static int done;
+    if (done || !rd32(LM_CurrentA5)) return;
+    const char *s = getenv("POP2_TEST_POKE");
+    if (!s) { done = 1; return; }
+    if (runtime_us() < 2000000) return;          /* after the THINK C startup initialised globals */
+    done = 1;
+    char buf[512]; strncpy(buf, s, sizeof buf - 1); buf[sizeof buf - 1] = 0;
+    for (char *t = strtok(buf, ","); t; t = strtok(NULL, ",")) {
+        long off; int size; unsigned long val;
+        if (sscanf(t, "%li:%d:%li", &off, &size, (long *)&val) != 3) continue;
+        maddr a = rd32(LM_CurrentA5) + (int32_t)off;
+        if (size == 1) wr8(a, (uint8_t)val); else if (size == 2) wr16(a, (uint16_t)val); else wr32(a, (uint32_t)val);
+        fprintf(stderr, "[test] poke A5%+ld = %lx\n", off, val);
+    }
+}
+
 /* Work that must happen at deterministic points: timers, input script, snapshots, audio. */
 void runtime_trap_boundary(void) {
     static int busy;
@@ -140,6 +160,7 @@ void runtime_trap_boundary(void) {
     time_run_tasks(runtime_us());
     sound_service();
     { extern void event_script_tick(uint64_t now_ms); event_script_tick(runtime_us() / 1000); }
+    test_pokes();
     snapshot();
     busy = 0;
 }
