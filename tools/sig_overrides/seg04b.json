@@ -1,0 +1,33 @@
+{
+  "GetRow": {"conv": "manual"},
+  "AdjustRoom": {"conv": "manual"},
+
+  "FUN_00021076": {"ret": 2},
+  "seg4_021452": {"ret": 2},
+  "GetCellsInFront": {"ret": 2},
+  "FUN_00021518": {"ret": 2},
+  "seg4_021542": {"ret": 2},
+  "seg4_021562": {"ret": 2},
+  "GetCharCol": {"ret": 4},
+  "FUN_00021ac8": {"ret": 2},
+  "seg4_021ae0": {"ret": 2},
+  "seg4_021b0e": {"ret": 2},
+  "CheckCollide1": {"ret": 2},
+  "IsDeadPos": {"ret": 2},
+  "FUN_0002219e": {"ret": 2},
+  "DecLifePts": {"ret": 2},
+  "seg4_0235de": {"ret": 2},
+  "GetBarrDistFromBack": {"ret": 2},
+
+  "seg4_02108a": {"ret": 0},
+  "seg4_021158": {"ret": 0},
+  "seg4_02129a": {"ret": 0},
+  "FUN_00021866": {"ret": 0},
+  "FUN_00021fe8": {"ret": 0},
+  "FUN_000220ac": {"ret": 0},
+  "FUN_00022402": {"ret": 0},
+  "CheckBarr": {"ret": 0},
+  "FUN_00022fea": {"ret": 0},
+  "GroundBump": {"ret": 0},
+  "EnemyCollide": {"ret": 0}
+}
