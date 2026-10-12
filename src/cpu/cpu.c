@@ -71,8 +71,10 @@ void cpu_dump_history(int n) {
 
 /* ------------------------------------------------------------ memory -- */
 unsigned int m68k_read_memory_8(unsigned int a)  { return rd8(a); }
-unsigned int m68k_read_memory_16(unsigned int a) { return rd16(a); }
-unsigned int m68k_read_memory_32(unsigned int a) { return rd32(a); }
+void runtime_ticks_peek(void);
+#define TICKS_PEEK(a) do { if (((a) & ADDR_MASK) - 0x168u < 6u) runtime_ticks_peek(); } while (0)   /* reads of Ticks ($16A) */
+unsigned int m68k_read_memory_16(unsigned int a) { TICKS_PEEK(a); return rd16(a); }
+unsigned int m68k_read_memory_32(unsigned int a) { TICKS_PEEK(a); return rd32(a); }
 static uint32_t watch_lo = 1, watch_hi = 0;
 static void watch_hit(unsigned a, unsigned v, int size) {
     extern int loader_locate(maddr a, int *seg, uint32_t *off);

@@ -39,7 +39,27 @@ static int fn_index_of(const char *name) {
     return -1;
 }
 
+/* Bytes the original leaves uninitialised and that only ever hold stack garbage: the
+ * value differs between the original (its own frames left it) and the port, without
+ * any effect on behaviour. Each entry: A5 offset of a pointer to a table, record
+ * stride, byte within the record, record count.
+ *   MIDI note queues (seg11 QNoteOff/QNoteOn): 100 records of 16 bytes; byte 15 is
+ *   padding of the caller's stack record (ProcessMidiNoteOff/ProcessMidiEvents). */
+static const struct { int32_t a5off; uint32_t stride, byte, count; } check_ignore[] = {
+    { -0x11e0, 16, 15, 100 },
+    { -0x11e4, 16, 15, 100 },
+};
+static int check_ignored(maddr a) {
+    for (size_t i = 0; i < sizeof check_ignore / sizeof check_ignore[0]; i++) {
+        maddr t = rd32(g_a5 + check_ignore[i].a5off) & ADDR_MASK;
+        if (!t || a < t || a >= t + check_ignore[i].stride * check_ignore[i].count) continue;
+        if ((a - t) % check_ignore[i].stride == check_ignore[i].byte) return 1;
+    }
+    return 0;
+}
 static maddr entry_g;
+extern uint64_t runtime_trap_count;
+uint64_t runtime_us(void);
 static void report_diff(int fi, maddr sp_after, uint32_t d0_c, uint32_t d0_68k) {
     int shown = 0;
     uint32_t rmask = fn_info[fi].ret_bytes >= 4 ? 0xFFFFFFFFu : fn_info[fi].ret_bytes == 2 ? 0xFFFFu : fn_info[fi].ret_bytes == 1 ? 0xFFu : 0;
@@ -47,7 +67,7 @@ static void report_diff(int fi, maddr sp_after, uint32_t d0_c, uint32_t d0_68k) 
     for (uint32_t a = 0; a < MEM_SIZE && shown < 12; a++) {
         if (a >= THUNK_BASE && a < THUNK_BASE + 2 * THUNK_COUNT) continue;
         if (a < sp_after && a >= sp_after - 0x10000) continue;          /* dead stack below SP */
-        if (M[a] != shared_mem[a] && a != entry_g && a != entry_g + 1) {
+        if (M[a] != shared_mem[a] && a != entry_g && a != entry_g + 1 && !check_ignored(a)) {
             fprintf(stderr, "[check] %s: mem %06x port=%02x original=%02x\n", fn_info[fi].name, a, M[a], shared_mem[a]);
             shown++;
         }
@@ -68,6 +88,7 @@ static void checked_runner(NativeFn fn, const char *name, maddr entry) {
         uint32_t d0 = cpu_call(entry, NULL);
         memcpy(shared_mem, M, MEM_SIZE);
         shared_regs[0] = d0; shared_regs[1] = cpu_get(R_SP);
+        shared_regs[2] = (uint32_t)runtime_trap_count; shared_regs[3] = (uint32_t)runtime_us();
         _exit(0);
     }
     fn();
@@ -86,6 +107,7 @@ static void checked_runner(NativeFn fn, const char *name, maddr entry) {
                     if (b >= THUNK_BASE && b < THUNK_BASE + 2 * THUNK_COUNT) continue;
                     if (b < sp && b >= sp - 0x10000) continue;
                     if (b == entry || b == entry + 1) continue;
+                    if (check_ignored(b)) continue;
                     differs = 1; break;
                 }
             }
@@ -95,6 +117,9 @@ static void checked_runner(NativeFn fn, const char *name, maddr entry) {
     if (differs) {
         check_fail[fi]++;
         fprintf(stderr, "[check] MISMATCH in %s (call %d)\n", name, check_count[fi]);
+        if (shared_regs[2] != (uint32_t)runtime_trap_count || shared_regs[3] != (uint32_t)runtime_us())
+            fprintf(stderr, "[check] %s: traps/clock port=%u/%uus original=%u/%uus\n", name,
+                    (uint32_t)runtime_trap_count, (uint32_t)runtime_us(), shared_regs[2], shared_regs[3]);
         report_diff(fi, sp, d0, shared_regs[0]);
     } else if (check_count[fi] == 1) {
         fprintf(stderr, "[check] %s ok\n", name);

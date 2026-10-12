@@ -36,9 +36,13 @@ extern maddr g_a5;                               /* the application's A5 (consta
 /* ---- memory helpers with explicit widths ---- */
 #define R8(a)        rd8((maddr)(a))
 #define RS8(a)       ((int8_t)rd8((maddr)(a)))
-#define R16(a)       rds16((maddr)(a))
-#define RU16(a)      rd16((maddr)(a))
-#define R32(a)       rd32((maddr)(a))
+/* 16/32-bit reads go through port_rd*: a read of Ticks ($16A) lets virtual time pass
+ * in deterministic mode exactly like the 68k core does (see runtime_ticks_peek). */
+void runtime_ticks_peek(void);
+static inline maddr port_peek(maddr a) { if ((a & ADDR_MASK) - 0x168u < 6u) runtime_ticks_peek(); return a; }
+#define R16(a)       rds16(port_peek((maddr)(a)))
+#define RU16(a)      rd16(port_peek((maddr)(a)))
+#define R32(a)       rd32(port_peek((maddr)(a)))
 #define W8(a, v)     wr8((maddr)(a), (uint8_t)(v))
 #define W16(a, v)    wr16((maddr)(a), (uint16_t)(v))
 #define W32(a, v)    wr32((maddr)(a), (uint32_t)(v))

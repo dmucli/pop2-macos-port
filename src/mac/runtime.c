@@ -26,13 +26,26 @@ static uint64_t vclock_us;
 static int traps_since_idle;
 uint64_t runtime_us(void) { return runtime_deterministic ? vclock_us : host_us() - t0_us; }
 void runtime_trap_boundary(void);
+static int traps_since_peek = 1;
+uint64_t runtime_trap_count;
 void runtime_trap_hook(void) {
+    runtime_trap_count++;
     if (!runtime_deterministic) return;
     vclock_us += 8;
     traps_since_idle++;
+    traps_since_peek = 1;
     runtime_trap_boundary();
 }
 uint32_t runtime_ticks(void) { return (uint32_t)(runtime_us() * 60 / 1000000u); }
+/* Deterministic mode: a read of the Ticks low-memory global that follows another
+ * one with no trap in between is a polling loop; let virtual time pass. This keeps
+ * time independent of how many instructions run (ported C vs original 68k code). */
+void runtime_ticks_peek(void) {
+    if (!runtime_deterministic) return;
+    if (traps_since_peek) { traps_since_peek = 0; return; }
+    vclock_us += 50;
+    wr32(LM_Ticks, runtime_ticks());
+}
 
 void runtime_init_lowmem(void) {
     t0_us = host_us();
@@ -180,7 +193,11 @@ void runtime_trap_boundary(void) {
 /* ---- idle: called between CPU slices ---- */
 void runtime_idle(void) {
     if (runtime_deterministic) {
-        if (!traps_since_idle) { vclock_us += 50; runtime_trap_boundary(); }   /* trap-free loops still progress */
+        /* Loops that neither call traps nor poll Ticks still progress, but only after a
+         * long trap-free stretch, so ordinary code never depends on instruction counts. */
+        static int quiet_slices;
+        if (traps_since_idle) quiet_slices = 0;
+        else if (++quiet_slices >= 32) { vclock_us += 1000; runtime_trap_boundary(); }
         traps_since_idle = 0;
         platform_poll();
         platform_present_if_due();
