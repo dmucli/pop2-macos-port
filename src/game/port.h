@@ -96,6 +96,10 @@ static inline void port_leave(maddr *sp) { emu_set_sp(*sp); }
 #define ENTRY_LINK(fn, link, regbytes)  ENTRY_(fn, 8 + (link) + (regbytes)); const maddr a6 = args_ - 8; (void)a6
 #define ENTRY_NOLINK(fn, regbytes)      ENTRY_(fn, 4 + (regbytes))
 
+/* A division by zero where the original takes a 68k exception (a fatal system error):
+ * report it and quit cleanly instead of crashing the host. */
+void port_divide_by_zero(const char *where) __attribute__((noreturn));
+
 /* Signed views of uniform return values */
 #define S16(x) ((int16_t)(x))
 #define S32(x) ((int32_t)(x))

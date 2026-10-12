@@ -1159,7 +1159,7 @@ uint32_t PrinceResetSnd(int16_t snd) {
 static uint32_t PrinceSetSnd_body(int16_t snd) {
     uint32_t d0 = (uint32_t)((int32_t)snd << 3);
     int16_t it = R16(gSndTable + 4 + (int16_t)d0);
-    if (it != 0) return SetSoundItem(it);
+    if (it != 0) { cpu_set(R_D0, d0); return SetSoundItem(it); }   /* the callee keeps D0's high word: the original enters it with D0 = snd << 3 */
     return d0;
 }
 uint32_t PrinceSetSnd(int16_t snd) {
@@ -1170,7 +1170,7 @@ uint32_t PrinceSetSnd(int16_t snd) {
 static uint32_t PrinceSndOn_body(int16_t snd) {
     uint32_t d0 = (uint32_t)((int32_t)snd << 3);
     int16_t it = R16(gSndTable + 4 + (int16_t)d0);
-    if (it != 0) return SoundItemOn(it);
+    if (it != 0) { cpu_set(R_D0, d0); return SoundItemOn(it); }   /* the callee keeps D0's high word: the original enters it with D0 = snd << 3 */
     return d0 & 0xffff0000u;
 }
 uint32_t PrinceSndOn(int16_t snd) {
