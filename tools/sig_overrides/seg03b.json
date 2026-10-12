@@ -1,0 +1,19 @@
+{
+  "DrawObjLoose": {"params": [[4, 2]]},
+
+  "ComputeHalfRect": {"conv": "manual"},
+  "GetBGSetImgSize": {"conv": "manual"},
+  "PoPSetPalette": {"conv": "manual"},
+  "DrawOppMeter": {"conv": "manual"},
+
+  "CheckAddDRect": {"ret": 0},
+  "DrawHalf": {"ret": 0},
+  "DrawFloorBuf": {"ret": 0},
+  "DrawObj": {"ret": 0},
+  "DrawRestartMessage": {"ret": 0},
+  "LoadFlameShapes": {"ret": 0},
+  "LoadLevel": {"ret": 0},
+  "LoadSwordSet": {"ret": 0},
+  "SetKidPalette": {"ret": 0},
+  "LoadOppSet": {"ret": 0}
+}
