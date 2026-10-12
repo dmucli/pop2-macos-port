@@ -36,7 +36,7 @@ done
 list=("$@"); [ ${#list} -eq 0 ] && list=(${(k)SCN})
 mkdir -p $OUT
 rm -f $OUT/*.log                     # results only from this run
-JOBS=${JOBS:-$(( $(sysctl -n hw.ncpu) / 2 ))}   # scenarios run in parallel, at most JOBS at a time
+JOBS=${JOBS:-$(( $(sysctl -n hw.ncpu) / 4 ))}   # scenarios run in parallel, at most JOBS at a time (several engineers share the machine)
 pids=()
 for sc in $list; do
   while (( $(jobs -r | wc -l) >= JOBS )); do sleep 0.2; done
