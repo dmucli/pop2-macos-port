@@ -132,3 +132,18 @@ int macos_ask_save_name(const char *prompt, const char *def, char *out, int outs
         }
     }
 }
+
+/* Dock icon from RGBA pixels (extracted from the user's copy of the game). */
+void macos_set_app_icon(const uint8_t *rgba, int w, int h) {
+    @autoreleasepool {
+        NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:NULL pixelsWide:w pixelsHigh:h
+            bitsPerSample:8 samplesPerPixel:4 hasAlpha:YES isPlanar:NO colorSpaceName:NSDeviceRGBColorSpace
+            bytesPerRow:w * 4 bitsPerPixel:32];
+        memcpy(rep.bitmapData, rgba, (size_t)w * h * 4);
+        NSImage *img = [[NSImage alloc] initWithSize:NSMakeSize(w, h)];
+        [img addRepresentation:rep];
+        [NSApplication sharedApplication].applicationIconImage = img;
+        const char *dump = getenv("POP2_ICON_DUMP");     /* debug: write the icon as PNG */
+        if (dump) [[rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}] writeToFile:@(dump) atomically:YES];
+    }
+}

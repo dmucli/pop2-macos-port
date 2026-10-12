@@ -86,6 +86,7 @@ int main(int argc, char **argv) {
     if (!headless) { extern void platform_menu_early_init(void); platform_menu_early_init(); }
     if (!headless && platform_init(scale)) return 1;
     if (loader_launch(app)) return 1;
+    if (!headless) { extern void runtime_set_app_icon(void); runtime_set_app_icon(); }
     cpu_set_idle_hook(runtime_idle);
     cpu_run_forever();
     fm_close_all();
