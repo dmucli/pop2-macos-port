@@ -104,8 +104,10 @@ All inside the unit; no override outside it.
 
 ## Verification
 
-* `tools/check.sh` (after merging master): no mismatch; 14 functions of the unit verified in
-  the standard scenarios (the save "Level"/"Level 15" is level 14, the final level).
+* `tools/check.sh` (master with one scenario per saved level): no mismatch at all; 16
+  functions of the unit verified directly (level 14, the final level, is the saves "Level"
+  and "Level 15"). No saved game is a desert level (level 2), so CODE 18 is not reached by
+  the standard scenarios.
 * Desert (level 2, type 1): new game, `cmd-l` to skip to level 2, keys to pass the cut scene,
   then walking left/right (stones, exit, planks, rocks, sand). All desert functions verified
   (some with `POP2_NATIVE_ONLY` so that their callers run as 68k code).
