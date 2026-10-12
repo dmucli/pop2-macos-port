@@ -15,12 +15,10 @@ void runtime_system_resources(void);
 int  platform_init(int scale);
 void platform_shutdown(void);
 
-static const char *default_hfv(void) {
-    static char p[1024];
-    const char *home = getenv("HOME");
-    snprintf(p, sizeof p, "%s/Documents/GitHub/PoP2/PoP2.hfv", home ? home : ".");
-    return p;
-}
+const char *macos_locate_disk_image(int force_ask);
+const char *macos_support_dir(void);
+void macos_alert(const char *title, const char *text);
+int  macos_in_app_bundle(void);
 
 static void on_term(int sig) {
     (void)sig;
@@ -36,18 +34,29 @@ int main(int argc, char **argv) {
         if (!strcmp(argv[i], "--app") && i + 1 < argc) app = argv[++i];
         else if (!strcmp(argv[i], "--headless")) headless = 1;
         else if (!strcmp(argv[i], "--scale") && i + 1 < argc) scale = atoi(argv[++i]);
+        else if (!strncmp(argv[i], "-psn_", 5)) continue;          /* Finder launch */
         else hfv = argv[i];
     }
-    if (!hfv) hfv = getenv("POP2_HFV") ? getenv("POP2_HFV") : default_hfv();
-
-    char overlay[1024];
-    const char *home = getenv("HOME");
-    if (getenv("POP2_OVERLAY")) snprintf(overlay, sizeof overlay, "%s", getenv("POP2_OVERLAY"));
-    else snprintf(overlay, sizeof overlay, "%s/Library/Application Support/PoP2-port/disk", home ? home : ".");
-
-    if (vfs_mount_hfs(hfv, overlay)) {
+    /* The game data comes from the user's own copy of the original disk image:
+     * command line, POP2_HFV, or (app / interactive use) the remembered or chosen file. */
+    int asked = 0;
+    if (!hfv) hfv = getenv("POP2_HFV");
+    if (!hfv && !headless) { hfv = macos_locate_disk_image(0); asked = 1; }
+    if (!hfv) {
         fprintf(stderr, "usage: pop2 [path/to/PoP2.hfv]\n  The game data is read from your own copy of the original disk image.\n");
         return 1;
+    }
+
+    char overlay[1024];
+    if (getenv("POP2_OVERLAY")) snprintf(overlay, sizeof overlay, "%s", getenv("POP2_OVERLAY"));
+    else snprintf(overlay, sizeof overlay, "%s/disk", macos_support_dir());
+
+    while (vfs_mount_hfs(hfv, overlay)) {
+        fprintf(stderr, "%s: not a Prince of Persia 2 HFS disk image\n", hfv);
+        if (!asked) return 1;
+        macos_alert("This file is not a usable disk image",
+                    "Choose the HFS disk image of your original Prince of Persia 2 for Macintosh.");
+        if (!(hfv = macos_locate_disk_image(1))) return 1;
     }
     if (getenv("POP2_LS")) {
         for (VNode *n = g_vol.nodes; n; n = n->next)
@@ -74,8 +83,10 @@ int main(int argc, char **argv) {
     runtime_system_resources();
     { extern void native_init(void); native_init(); }
     if (headless) signal(SIGTERM, on_term);
+    if (!headless) { extern void platform_menu_early_init(void); platform_menu_early_init(); }
     if (!headless && platform_init(scale)) return 1;
     if (loader_launch(app)) return 1;
+    if (!headless) { extern void runtime_set_app_icon(void); runtime_set_app_icon(); }
     cpu_set_idle_hook(runtime_idle);
     cpu_run_forever();
     fm_close_all();

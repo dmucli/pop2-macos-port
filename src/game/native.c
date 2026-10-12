@@ -85,6 +85,7 @@ static void checked_runner(NativeFn fn, const char *name, maddr entry) {
     pid_t pid = fork();
     if (pid == 0) {
         /* child: run the original code at its entry with the args still on the stack */
+        { extern int runtime_is_check_child; runtime_is_check_child = 1; }
         wr16(entry, orig_word[fi]);
         uint32_t d0 = cpu_call(entry, NULL);
         memcpy(shared_mem, M, MEM_SIZE);
