@@ -1,0 +1,31 @@
+{
+  "Rnd": {"params": [[4, 2]]},
+
+  "AddCharX": {"conv": "manual"},
+  "AddFCharX": {"conv": "manual"},
+  "OpponentClose": {"conv": "manual"},
+  "IsShadowBlinkOn": {"conv": "manual", "ret": 2},
+
+  "DoOppTumbleSeq": {"ret": 2},
+  "GetTotalDeadOpps": {"ret": 2},
+  "InRange": {"ret": 0},
+  "FUN_0001dfcc": {"ret": 0},
+  "EnGarde": {"ret": 0},
+  "WaitingEngarde": {"ret": 0},
+  "FUN_0001e9f8": {"ret": 2},
+  "GenFight": {"ret": 0},
+  "FUN_0001ebea": {"ret": 0},
+  "seg4_01f12c": {"ret": 0},
+  "FUN_0001f66c": {"ret": 0},
+  "seg4_01f6b4": {"ret": 0},
+  "seg4_01f706": {"ret": 2},
+  "FlameSwordDecLifePts": {"ret": 2},
+  "seg4_01fc44": {"ret": 0},
+  "GetKidIdxAsOpp": {"ret": 2},
+  "FUN_0001ff82": {"ret": 2},
+  "FUN_0002009e": {"ret": 0},
+  "Handler": {"ret": 2},
+  "AnimCharTap": {"ret": 0},
+  "SetKidDeathMethod": {"ret": 0},
+  "FirstInRow": {"ret": 2}
+}
