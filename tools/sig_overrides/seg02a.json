@@ -1,0 +1,27 @@
+{
+  "FUN_00010518": {"ret": 2},
+  "PlayNIS": {"ret": 2},
+  "DialogFadeIn": {"ret": 2},
+  "DialogFadeOut": {"ret": 2},
+  "FUN_00010d56": {"ret": 2},
+  "FUN_00010f52": {"ret": 2},
+  "ResumeGame": {"ret": 2},
+  "SaveGame": {"ret": 2},
+  "InitSavedGameStruct": {"conv": "manual"},
+  "HOFAddPlayer": {"conv": "manual"},
+  "CopyProtectionDialog": {"ret": 0},
+  "DrawCopyProtectionDialog": {"ret": 0},
+  "GetCopyProtectionSymbol": {"ret": 2},
+  "PtInSymbolRect": {"ret": 2},
+  "HandleEvent": {"ret": 2},
+  "HandleMouseDown": {"ret": 2},
+  "HandleMenuChoice": {"ret": 2},
+  "HandleGameMenuChoice": {"ret": 0},
+  "CheckSoundChanges": {"ret": 0},
+  "e2MAC_HideMenuBar": {"ret": 0},
+  "e2MAC_ShowMenuBar": {"ret": 0},
+
+  "Rnd": {"params": [[4, 2]]},
+  "FadeInColors": {"params": [[4, 4], [8, 4], [12, 4]]},
+  "FadeOutColors": {"params": [[4, 4], [8, 4], [12, 4]]}
+}
