@@ -131,7 +131,7 @@ FRAME_END(f);                // before every return
 
 ```sh
 make -j8 HOOK=1                    # regenerates glue; must build warning-free for your file
-tools/check.sh                     # all scenarios (~1 min); or e.g. tools/check.sh newgame "save:Level 7"
+tools/check.sh                     # all scenarios: intro, new game, one per saved level (~3 min); or e.g. tools/check.sh newgame "save:Level 7"
 ```
 
 `check.sh` runs the game deterministically with scripted input. Every call of a ported
