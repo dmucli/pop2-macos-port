@@ -1,0 +1,11 @@
+{
+  "AddNextBFItemToTable": {"ret": 2},
+  "AddMid": {"ret": 2},
+  "FUN_00018138": {"ret": 0},
+  "FUN_000183f8": {"ret": 0},
+  "RedrawCellFast": {"ret": 0},
+  "DrawCustomRoomImgs": {"ret": 0},
+  "DrawCustomRoomImg": {"ret": 0},
+  "CheckGateInFore": {"ret": 0},
+  "DrawBFItem": {"ret": 0}
+}
