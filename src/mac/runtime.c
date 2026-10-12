@@ -4,6 +4,7 @@
 #include "m68k.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <time.h>
 
@@ -162,6 +163,17 @@ void runtime_trap_boundary(void) {
     { extern void event_script_tick(uint64_t now_ms); event_script_tick(runtime_us() / 1000); }
     test_pokes();
     snapshot();
+    {   /* POP2_EXIT_AT_MS: end a deterministic run at a fixed virtual time */
+        static long exit_at = -1;
+        if (exit_at < 0) exit_at = getenv("POP2_EXIT_AT_MS") ? atol(getenv("POP2_EXIT_AT_MS")) : 0;
+        if (exit_at && (long)(runtime_us() / 1000) >= exit_at) {
+            extern void cpu_print_native_stats(void);
+            if (getenv("POP2_NATIVE_STATS")) cpu_print_native_stats();
+            fprintf(stderr, "exit at virtual %ld ms\n", exit_at);
+            fflush(stderr);
+            _exit(0);
+        }
+    }
     busy = 0;
 }
 

@@ -9,7 +9,8 @@ set -u
 ROOT=${0:A:h:h}
 HFV=${HFV:-$ROOT/../PoP2.hfv}; [ -f "$HFV" ] || HFV=$ROOT/../PoP2.hfv
 BIN=${BIN:-$ROOT/build/pop2}
-SECS=${SECS:-35}
+SECS=${SECS:-600}          # host-time safety limit; runs end at virtual time VMS
+VMS=${VMS:-120000}
 CALLS=${CALLS:-30}
 OUT=${OUT:-$ROOT/build/check}
 MOVES="right:1500,shift-right:1200,up:300,left:900,shift-left:900,down:400,up:600,right:700,shift:200,right:1600,up:300,left:2500,shift-up:300,right:300,down:300,shift:300"
@@ -37,8 +38,8 @@ for sc in $list; do
   file=${spec%%|*}; input=${spec#*|}
   tag=${sc//[^A-Za-z0-9]/_}; rm -rf $OUT/ovl_$tag
   ( env POP2_CHECK=$CALLS POP2_DETERMINISTIC=1 POP2_OVERLAY=$OUT/ovl_$tag POP2_TEST_POKE="-0x56d8:2:1" \
-        POP2_OPENFILE="${file/:/\/}" POP2_INPUT="$input" POP2_NATIVE_STATS=1 \
-        $BIN --headless $HFV > $OUT/$tag.log 2>&1 & pid=$!; sleep $SECS; kill -TERM $pid 2>/dev/null; wait $pid 2>/dev/null ) &
+        POP2_OPENFILE="${file/:/\/}" POP2_INPUT="$input" POP2_NATIVE_STATS=1 POP2_EXIT_AT_MS=$VMS \
+        $BIN --headless $HFV > $OUT/$tag.log 2>&1 & pid=$!; ( sleep $SECS; kill -TERM $pid 2>/dev/null ) >/dev/null 2>&1 & killer=$!; wait $pid 2>/dev/null; kill $killer 2>/dev/null ) &
   pids+=($!)
 done
 wait
