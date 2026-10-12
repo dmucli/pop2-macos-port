@@ -16,6 +16,7 @@ void  event_post(uint16_t what, uint32_t msg);
 void  platform_wait_ms(int ms);
 void  platform_menu_sync(void);
 int   platform_menu_pending(uint32_t *result);
+int   platform_menu_has_pending(void);
 
 /* WindowRecord offsets (after the 108-byte port) */
 enum { W_kind = 108, W_visible = 110, W_hilited = 111, W_goAway = 112, W_struc = 114, W_cont = 118,
@@ -382,7 +383,7 @@ static void T_SetWindowPic(uint16_t w) { (void)w; maddr p = pop32(); wr32(pop32(
 static void T_FindWindow(uint16_t w) {
     (void)w; maddr out = pop32(); QPoint p = pt_from32(pop32());
     wr32(out, 0);
-    if (menubar_visible && p.v < MBAR_H) { ret16(1); return; }   /* inMenuBar */
+    if (p.v < MBAR_H && (menubar_visible || platform_menu_has_pending())) { ret16(1); return; }   /* inMenuBar */
     for (maddr win = window_list(); win; win = rd32(win + W_next)) {
         if (!rd8(win + W_visible)) continue;
         QRect s = win_struct(win), c = win_global_content(win);

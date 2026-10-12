@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key><string>en</string>
+	<key>CFBundleExecutable</key><string>pop2</string>
+	<key>CFBundleIdentifier</key><string>local.pop2-port</string>
+	<key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+	<key>CFBundleName</key><string>PoP2 Port</string>
+	<key>CFBundleDisplayName</key><string>PoP2 Port</string>
+	<key>CFBundlePackageType</key><string>APPL</string>
+	<key>CFBundleShortVersionString</key><string>0.1</string>
+	<key>CFBundleVersion</key><string>1</string>
+	<key>LSMinimumSystemVersion</key><string>12.0</string>
+	<key>NSHighResolutionCapable</key><true/>
+	<key>LSApplicationCategoryType</key><string>public.app-category.games</string>
+</dict>
+</plist>
