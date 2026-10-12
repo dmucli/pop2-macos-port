@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language_definitions>
+  <language processor="68000"
+            endian="big"
+            size="32"
+            variant="MacToolbox"
+            version="1.0"
+            slafile="mac68k.sla"
+            processorspec="mac68k.pspec"
+            id="68000:BE:32:MacToolbox">
+    <description>Motorola 68020 with classic Mac OS line-A trap calls</description>
+    <compiler name="THINK C" spec="mac68k_thinkc.cspec" id="thinkc"/>
+    <external_name tool="DWARF.register.mapping.file" name="mac68k.dwarf"/>
+  </language>
+</language_definitions>
