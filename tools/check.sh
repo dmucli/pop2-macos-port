@@ -28,13 +28,18 @@ moves_from() {
 typeset -A SCN
 SCN[intro]="intro|"
 SCN[newgame]="newgame|15000:cmd-n:200,$(moves_from 19000),$(moves_from 40000)"
-for s in "Level" "Level 5:2" "Level 5:3" "Level 7" "Level 7:2" "Level 8" "Level 8:2" "Level 11:2" "Level 13:2" "Level 15"; do
+# one save per level (and the extra saves of some levels): every level type is played
+for s in "Level" "Level 3" "Level 4" "Level 5" "Level 5:2" "Level 5:3" "Level 6" "Level 7" "Level 7:2" "Level 8" "Level 8:2" \
+         "Level 9" "Level 10" "Level 11" "Level 11:2" "Level 12" "Level 13" "Level 13:2" "Level 14" "Level 15"; do
   SCN[save:$s]="$s|15000:cmd-o:200,$(moves_from 22000),$(moves_from 45000)"
 done
 list=("$@"); [ ${#list} -eq 0 ] && list=(${(k)SCN})
 mkdir -p $OUT
+rm -f $OUT/*.log                     # results only from this run
+JOBS=${JOBS:-$(( $(sysctl -n hw.ncpu) / 2 ))}   # scenarios run in parallel, at most JOBS at a time
 pids=()
 for sc in $list; do
+  while (( $(jobs -r | wc -l) >= JOBS )); do sleep 0.2; done
   spec=${SCN[$sc]:-}; [ -z "$spec" ] && { echo "unknown scenario $sc"; continue; }
   file=${spec%%|*}; input=${spec#*|}
   tag=${sc//[^A-Za-z0-9]/_}; rm -rf $OUT/ovl_$tag
