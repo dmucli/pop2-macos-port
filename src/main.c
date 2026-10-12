@@ -83,6 +83,7 @@ int main(int argc, char **argv) {
     runtime_system_resources();
     { extern void native_init(void); native_init(); }
     if (headless) signal(SIGTERM, on_term);
+    if (!headless) { extern void platform_menu_early_init(void); platform_menu_early_init(); }
     if (!headless && platform_init(scale)) return 1;
     if (loader_launch(app)) return 1;
     cpu_set_idle_hook(runtime_idle);

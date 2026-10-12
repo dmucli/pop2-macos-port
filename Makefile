@@ -48,7 +48,7 @@ $(BUILD)/%.o: %.c $(wildcard src/*/*.h src/*.h) src/game/gen/proto.h
 
 $(BUILD)/%.o: %.m
 	@mkdir -p $(dir $@)
-	$(CC) -O2 -g -fobjc-arc -Wall -c $< -o $@
+	$(CC) -O2 -g -fobjc-arc -Wall -Isrc -c $< -o $@
 
 $(BUILD)/pop2: $(BUILD)/m68kops.c $(OBJ)
 	$(CC) $(OBJ) $(LDFLAGS) -o $@

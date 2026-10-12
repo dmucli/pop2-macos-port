@@ -72,6 +72,7 @@ void ExitToShell(void) {
     { extern void platform_shutdown(void); platform_shutdown(); }
     exit(0);
 }
+void runtime_quit(void) { ExitToShell(); }   /* for code that sees Apple's ExitToShell declaration */
 static void T_ExitToShell(uint16_t w) { (void)w; ExitToShell(); }
 
 /* GetAppParms(apName, apRefNum, apParam) */
