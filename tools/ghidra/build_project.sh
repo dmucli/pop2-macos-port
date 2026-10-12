@@ -15,5 +15,6 @@ GHIDRA_HEADLESS_MAXMEM=8G $GHIDRA/support/analyzeHeadless $W/ghidra PoP2 \
   -import $W/ghidra_in/pop2_image.bin -overwrite -loader BinaryLoader -loader-baseAddr 0 \
   -processor 68000:BE:32:MacToolbox -cspec thinkc -scriptPath $HERE/scripts \
   -preScript MacSetup.java $W/ghidra_in/pop2_meta.json \
-  -postScript MacPost.java $W/ghidra_in/pop2_meta.json -max-cpu 8 > $W/headless.log 2>&1
-grep -E "MacSetup.java>|MacPost.java>|REPORT: (Import|Save)" $W/headless.log
+  -postScript MacPost.java $W/ghidra_in/pop2_meta.json \
+  -postScript FixNames.java $W/ghidra_in/pop2_meta.json $W/functions.json -max-cpu 8 > $W/headless.log 2>&1
+grep -E "MacSetup.java>|MacPost.java>|FixNames.java>|REPORT: (Import|Save)" $W/headless.log

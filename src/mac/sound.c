@@ -60,6 +60,7 @@ static Chan ch[MAXCH];
 static SDL_AudioDeviceID dev;
 static uint16_t master_l = 0x100, master_r = 0x100;
 uint32_t sound_frames_mixed;
+static float sound_peak;
 
 static uint32_t now_ms(void) { return SDL_GetTicks(); }
 
@@ -104,6 +105,7 @@ static void audio_cb(void *ud, Uint8 *stream, int len) {
     }
     for (int i = 0; i < frames * 2; i++) { if (out[i] > 1) out[i] = 1; if (out[i] < -1) out[i] = -1; }
     sound_frames_mixed += (uint32_t)frames;
+    for (int i = 0; i < frames * 2; i++) { float a = out[i] < 0 ? -out[i] : out[i]; if (a > sound_peak) sound_peak = a; }
 }
 
 int sound_init(void) {
@@ -263,8 +265,35 @@ static void service_double_buffer(Chan *k) {
     }
 }
 
+/* In deterministic mode there is no audio device: consume audio by virtual time. */
+extern int runtime_deterministic;
+uint64_t runtime_us(void);
+static void virtual_audio(void) {
+    static uint64_t last; static float buf[2 * 4096];
+    uint64_t now = runtime_us();
+    if (!last) { last = now; return; }
+    uint64_t frames = (now - last) * OUT_RATE / 1000000u;
+    if (frames < 256) return;
+    last += frames * 1000000u / OUT_RATE;
+    while (frames) {
+        int n = frames > 4096 ? 4096 : (int)frames;
+        audio_cb(NULL, (Uint8 *)buf, n * (int)sizeof(float) * 2);
+        frames -= (uint64_t)n;
+    }
+}
+
 /* Main-thread service: run queues, callbacks, refills. */
 void sound_service(void) {
+    if (runtime_deterministic && !dev) virtual_audio();
+    static int stats = -1; static uint32_t next;
+    if (stats < 0) stats = getenv("POP2_AUDIOSTATS") != NULL;
+    if (stats && now_ms() >= next) {
+        next = now_ms() + 2000;
+        int used = 0, dbn = 0, play = 0;
+        for (int i = 0; i < MAXCH; i++) if (ch[i].used) { used++; dbn += ch[i].dbq_n; play += ch[i].playing; }
+        fprintf(stderr, "[audio] chans=%d playing=%d dbq=%d mixed=%u peak=%.3f\n", used, play, dbn, sound_frames_mixed, sound_peak);
+        sound_peak = 0;
+    }
     for (int i = 0; i < MAXCH; i++) {
         Chan *k = &ch[i];
         if (!k->used) continue;

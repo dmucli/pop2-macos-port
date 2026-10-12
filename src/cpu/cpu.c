@@ -97,6 +97,14 @@ void retbool(int v) { wr16(cpu_get(R_SP), v ? 0x0100 : 0); }
  * the "return to native caller" marker used by cpu_call. */
 static NativeFn thunk_fn[THUNK_COUNT];
 static const char *thunk_name[THUNK_COUNT];
+static uint8_t thunk_is_hook[THUNK_COUNT];
+static uint64_t thunk_calls[THUNK_COUNT];
+/* Optional wrapper around ported-function hooks (differential checking). */
+void (*cpu_hook_runner)(NativeFn fn, const char *name, maddr entry);
+void cpu_print_native_stats(void) {
+    for (unsigned i = 0; i < THUNK_COUNT; i++)
+        if (thunk_is_hook[i]) fprintf(stderr, "[native] %-36s %llu calls\n", thunk_name[i], (unsigned long long)thunk_calls[i]);
+}   /* may appear anywhere (patched function entries) */
 static unsigned thunk_next = 1;
 
 maddr cpu_thunk(NativeFn fn, const char *name) {
@@ -108,13 +116,24 @@ maddr cpu_thunk(NativeFn fn, const char *name) {
     return THUNK_BASE + 2 * i;
 }
 
+/* A native replacement for an original function: its entry word is patched with
+ * the returned F-line opcode. */
+static unsigned hook_next = THUNK_COUNT - 1;   /* hooks grow down so trap thunk addresses never shift */
+uint16_t cpu_register_hook(NativeFn fn, const char *name) {
+    if (hook_next <= thunk_next) { fprintf(stderr, "out of thunks\n"); abort(); }
+    unsigned i = hook_next--;
+    thunk_fn[i] = fn; thunk_name[i] = name; thunk_is_hook[i] = 1;
+    wr16(THUNK_BASE + 2 * i, (uint16_t)(0xF000 | i));
+    return (uint16_t)(0xF000 | i);
+}
+
 static int call_depth;
 static int call_returned[64];
 
 static int linef_hook(unsigned int op) {
     unsigned i = op & 0x0FFF;
     uint32_t pc = cpu_get(R_PC) - 2;
-    if (pc != THUNK_BASE + 2 * i) {
+    if (pc != THUNK_BASE + 2 * i && !thunk_is_hook[i]) {
         fprintf(stderr, "unexpected line-F %04x at %06x\n", op, pc);
         return 0;
     }
@@ -125,6 +144,10 @@ static int linef_hook(unsigned int op) {
     }
     trap_ret = pop32();
     cur_trap_word = 0;
+    if (thunk_is_hook[i]) {
+        thunk_calls[i]++;
+        if (cpu_hook_runner) { cpu_hook_runner(thunk_fn[i], thunk_name[i], pc); cpu_set(R_PC, trap_ret); return 1; }
+    }
     thunk_fn[i]();
     cpu_set(R_PC, trap_ret);
     return 1;
@@ -204,7 +227,7 @@ static maddr trap_thunk(uint16_t w) {
     maddr *slot = (w & 0x0800) ? &tb_thunk[w & 0x3FF] : &os_thunk[w & 0xFF];
     if (!*slot) {
         /* each trap gets a distinct thunk so we know which trap it is */
-        if (thunk_next >= THUNK_COUNT) abort();
+        if (thunk_next >= hook_next) abort();
         unsigned i = thunk_next++;
         thunk_fn[i] = trap_thunk_entry; thunk_name[i] = "trap";
         thunk_trap_word[i] = w;
@@ -243,8 +266,32 @@ static void run_native_trap(uint16_t w) {
             fprintf(stderr, "[T] %06x%s %04X %s A0=%06x D0=%08x SP=%06x\n", trap_ret, loc, w, t ? t->name : "?", cpu_get(R_A0), cpu_get(R_D0), cpu_get(R_SP));
         }
     }
+    static FILE *tlog; static int tlog_init; static uint64_t tlog_n;
+    if (!tlog_init) { tlog_init = 1; if (getenv("POP2_TRAPLOG")) tlog = fopen(getenv("POP2_TRAPLOG"), "w"); }
+    if (tlog) {
+        extern int loader_locate(maddr a, int *seg, uint32_t *off);
+        int sg = 0; uint32_t of = trap_ret; loader_locate(trap_ret, &sg, &of);
+        fprintf(tlog, "%llu %04X %d+%04x D0=%08x A0=%06x A1=%06x SP=%06x\n", (unsigned long long)tlog_n++, w, sg, of, cpu_get(R_D0), cpu_get(R_A0), cpu_get(R_A1), cpu_get(R_SP));
+        if ((tlog_n & 1023) == 0) fflush(tlog);
+    }
     if (fn) fn(w); else trap_unimplemented(w);
+    { extern void runtime_trap_hook(void); runtime_trap_hook(); }
     if (cpu_trace && !(w & 0x0800)) fprintf(stderr, "    -> D0=%08x A0=%06x\n", cpu_get(R_D0), cpu_get(R_A0));
+}
+
+/* Invoke a trap from C (ported code): same dispatch as a line-A instruction. */
+void trap_invoke(uint16_t w) {
+    maddr save_ret = trap_ret;
+    maddr patch = (w & 0x0800) ? tb_patch[w & 0x3FF] : os_patch[w & 0xFF];
+    if (patch) {
+        if (w & 0x0800) cpu_call(patch, NULL);
+        else { uint32_t regs[15]; for (int r = 0; r < 15; r++) regs[r] = cpu_get(r); regs[R_D1] = w;
+               uint32_t a0, d0 = cpu_call_regs(patch, regs, &a0); cpu_set(R_D0, d0); if (!(w & 0x0100)) cpu_set(R_A0, a0); }
+    } else {
+        trap_ret = 0;
+        run_native_trap(w);
+    }
+    trap_ret = save_ret;
 }
 
 static int linea_hook(unsigned int op) {

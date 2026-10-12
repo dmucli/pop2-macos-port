@@ -59,6 +59,7 @@ static void T_UnloadSeg(uint16_t w) { (void)w; pop32(); }
 
 void ExitToShell(void) {
     fprintf(stderr, "ExitToShell\n");
+    { extern void cpu_print_native_stats(void); if (getenv("POP2_NATIVE_STATS")) cpu_print_native_stats(); }
     fm_close_all();
     vfs_flush_all();
     cpu_stop();
@@ -111,6 +112,7 @@ int loader_launch(const char *app_path) {
     wr32(a5 + 0x10, fh);
 
     cpu_set(R_A5, a5);
+    { extern void native_set_a5(maddr a5); native_set_a5(a5); }
     cpu_set(R_SP, stack_base);
     cpu_set(R_SR, 0x2000);                     /* supervisor, interrupts enabled */
     cpu_set(R_PC, jt_base + 2);                /* first jump-table entry */

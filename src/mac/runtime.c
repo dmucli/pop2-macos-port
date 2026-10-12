@@ -16,11 +16,25 @@ uint64_t host_us(void) {
     struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
     return (uint64_t)ts.tv_sec * 1000000u + (uint64_t)ts.tv_nsec / 1000u;
 }
-uint64_t runtime_us(void) { return host_us() - t0_us; }
+/* Deterministic mode (POP2_DETERMINISTIC=1): time is virtual and only advances
+ * per Toolbox trap (and per idle slice when no trap ran), so a run is a pure
+ * function of the trap call sequence. Used to A/B-test ported code. */
+int runtime_deterministic;
+static uint64_t vclock_us;
+static int traps_since_idle;
+uint64_t runtime_us(void) { return runtime_deterministic ? vclock_us : host_us() - t0_us; }
+void runtime_trap_boundary(void);
+void runtime_trap_hook(void) {
+    if (!runtime_deterministic) return;
+    vclock_us += 8;
+    traps_since_idle++;
+    runtime_trap_boundary();
+}
 uint32_t runtime_ticks(void) { return (uint32_t)(runtime_us() * 60 / 1000000u); }
 
 void runtime_init_lowmem(void) {
     t0_us = host_us();
+    runtime_deterministic = getenv("POP2_DETERMINISTIC") != NULL;
     /* low memory is zero from allocation; the Memory Manager already set its zone globals */
     wr16(LM_ROM85, 0x3FFF);           /* 128K+ ROMs with Color QuickDraw */
     wr16(LM_SysVersion, 0x0710);
@@ -103,8 +117,8 @@ static void snapshot(void) {
     static const char *dir; static int init, n; static uint64_t next;
     if (!init) { init = 1; dir = getenv("POP2_SNAP"); next = runtime_us() + 2000000; }
     if (!dir || runtime_us() < next) return;
-    next = runtime_us() + 3000000;
-    char path[1024]; snprintf(path, sizeof path, "%s/snap%03d.ppm", dir, n++);
+    next = runtime_us() + (getenv("POP2_SNAP_MS") ? (uint64_t)atoi(getenv("POP2_SNAP_MS")) * 1000u : 3000000u);
+    char path[1024]; snprintf(path, sizeof path, "%s/snap%05d.ppm", dir, n++);
     FILE *f = fopen(path, "wb"); if (!f) return;
     fprintf(f, "P6\n%d %d\n255\n", qd_screen_w, qd_screen_h);
     for (int i = 0; i < qd_screen_w * qd_screen_h; i++) {
@@ -115,8 +129,30 @@ static void snapshot(void) {
     fclose(f);
 }
 
+/* Work that must happen at deterministic points: timers, input script, snapshots, audio. */
+void runtime_trap_boundary(void) {
+    static int busy;
+    if (busy) return;
+    busy = 1;
+    static uint32_t last_tick;
+    uint32_t t = runtime_ticks();
+    if (t != last_tick) { last_tick = t; wr32(LM_Ticks, t); wr32(LM_Time, vfs_mac_time_now()); }
+    time_run_tasks(runtime_us());
+    sound_service();
+    { extern void event_script_tick(uint64_t now_ms); event_script_tick(runtime_us() / 1000); }
+    snapshot();
+    busy = 0;
+}
+
 /* ---- idle: called between CPU slices ---- */
 void runtime_idle(void) {
+    if (runtime_deterministic) {
+        if (!traps_since_idle) { vclock_us += 50; runtime_trap_boundary(); }   /* trap-free loops still progress */
+        traps_since_idle = 0;
+        platform_poll();
+        platform_present_if_due();
+        return;
+    }
     static uint32_t last_tick;
     uint32_t t = runtime_ticks();
     if (t != last_tick) {
@@ -126,6 +162,7 @@ void runtime_idle(void) {
     }
     time_run_tasks(runtime_us());
     sound_service();
+    { extern void event_script_tick(uint64_t now_ms); event_script_tick(runtime_us() / 1000); }
     snapshot();
     platform_poll();
     platform_present_if_due();

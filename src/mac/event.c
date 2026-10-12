@@ -2,6 +2,8 @@
 #include "qd.h"
 #include "trapnums.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 void runtime_idle(void);
 uint32_t runtime_ticks(void);
@@ -200,4 +202,58 @@ void traps_event_init(void) {
     trap_register(TRAP_ObscureCursor, T_ObscureCursor);
     trap_register(TRAP_ShieldCursor, T_ShieldCursor);
     trap_register(TRAP_GetCursor, T_GetCursor);
+}
+
+/* ---- scripted input for automated testing: POP2_INPUT="ms:key[:hold],..." ----
+ * keys: a-z 0-9 space return esc tab left right up down, prefix "cmd-"/"shift-"/"opt-". */
+typedef struct { uint64_t t; uint8_t code, ch; uint16_t mods; int down; } ScriptEv;
+static ScriptEv sev[512]; static int sev_n, sev_i, sev_init;
+static int keyinfo(const char *k, uint8_t *code, uint8_t *ch) {
+    static const char *letters = "asdfhgzxcv?bqweryt123465=97-80]ou[ip?lj'k;\\,/nm.";
+    if (strlen(k) == 1) {
+        char c = k[0];
+        for (int i = 0; letters[i]; i++) if (letters[i] == c && c != '?') { *code = (uint8_t)i; *ch = (uint8_t)c; return 1; }
+        if (c == '0') { *code = 0x1D; *ch = '0'; return 1; }
+    }
+    static const struct { const char *n; uint8_t code, ch; } named[] = {
+        {"space", 0x31, ' '}, {"return", 0x24, 13}, {"esc", 0x35, 27}, {"tab", 0x30, 9},
+        {"left", 0x7B, 0x1C}, {"right", 0x7C, 0x1D}, {"up", 0x7E, 0x1E}, {"down", 0x7D, 0x1F},
+        {"shiftkey", 0x38, 0}, {"enter", 0x4C, 3} };
+    for (unsigned i = 0; i < sizeof named / sizeof named[0]; i++) if (!strcmp(k, named[i].n)) { *code = named[i].code; *ch = named[i].ch; return 1; }
+    return 0;
+}
+static int cmp_sev(const void *a, const void *b) { const ScriptEv *x = a, *y = b; return x->t < y->t ? -1 : x->t > y->t; }
+void event_script_tick(uint64_t now_ms) {
+    if (!sev_init) {
+        sev_init = 1;
+        const char *s = getenv("POP2_INPUT");
+        if (!s) return;
+        char buf[4096]; strncpy(buf, s, sizeof buf - 1); buf[sizeof buf - 1] = 0;
+        for (char *tok = strtok(buf, ","); tok && sev_n < 500; tok = strtok(NULL, ",")) {
+            char key[64] = ""; unsigned long t = 0, hold = 100;
+            if (sscanf(tok, "%lu:%63[^:]:%lu", &t, key, &hold) < 2) continue;
+            uint16_t mods = 0; char *k = key;
+            for (;;) {
+                if (!strncmp(k, "cmd-", 4)) { mods |= 0x0100; k += 4; }
+                else if (!strncmp(k, "shift-", 6)) { mods |= 0x0200; k += 6; }
+                else if (!strncmp(k, "opt-", 4)) { mods |= 0x0800; k += 4; }
+                else break;
+            }
+            uint8_t code, ch;
+            if (!keyinfo(k, &code, &ch)) { fprintf(stderr, "[input] unknown key %s\n", k); continue; }
+            sev[sev_n++] = (ScriptEv){ t, code, ch, mods, 1 };
+            sev[sev_n++] = (ScriptEv){ t + hold, code, ch, mods, 0 };
+        }
+        qsort(sev, (size_t)sev_n, sizeof sev[0], cmp_sev);
+    }
+    while (sev_i < sev_n && sev[sev_i].t <= now_ms) {
+        ScriptEv *e = &sev[sev_i++];
+        event_modifiers_changed(e->down ? e->mods : 0);
+        if (e->code == 0x38) {   /* bare shift */
+            event_modifiers_changed(e->down ? 0x0200 : 0);
+            continue;
+        }
+        event_key(e->down, e->code, e->ch, e->down ? e->mods : 0, 0);
+        fprintf(stderr, "[input] %llu ms key %02x %s\n", (unsigned long long)now_ms, e->code, e->down ? "down" : "up");
+    }
 }

@@ -24,7 +24,10 @@ int mac_strcasecmp(const char *a, const char *b) {
 }
 
 uint32_t vfs_mac_time_now(void) {
-    /* seconds since 1904-01-01 local time */
+    /* seconds since 1904-01-01 local time; virtual in deterministic mode */
+    extern int runtime_deterministic;
+    extern uint64_t runtime_us(void);
+    if (runtime_deterministic) return 3000000000u + (uint32_t)(runtime_us() / 1000000u);
     time_t t = time(NULL);
     struct tm lt; localtime_r(&t, &lt);
     return (uint32_t)(t + lt.tm_gmtoff + 2082844800u);

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <unistd.h>
 
 void traps_loader_init(void);
 void runtime_init_lowmem(void);
@@ -20,6 +22,13 @@ static const char *default_hfv(void) {
     return p;
 }
 
+static void on_term(int sig) {
+    (void)sig;
+    extern void cpu_print_native_stats(void);
+    if (getenv("POP2_NATIVE_STATS")) cpu_print_native_stats();
+    _exit(0);
+}
+
 int main(int argc, char **argv) {
     const char *hfv = NULL, *app = ":Prince2:Prince of Persia 2";
     int headless = 0, scale = 2;
@@ -33,7 +42,8 @@ int main(int argc, char **argv) {
 
     char overlay[1024];
     const char *home = getenv("HOME");
-    snprintf(overlay, sizeof overlay, "%s/Library/Application Support/PoP2-port/disk", home ? home : ".");
+    if (getenv("POP2_OVERLAY")) snprintf(overlay, sizeof overlay, "%s", getenv("POP2_OVERLAY"));
+    else snprintf(overlay, sizeof overlay, "%s/Library/Application Support/PoP2-port/disk", home ? home : ".");
 
     if (vfs_mount_hfs(hfv, overlay)) {
         fprintf(stderr, "usage: pop2 [path/to/PoP2.hfv]\n  The game data is read from your own copy of the original disk image.\n");
@@ -62,6 +72,8 @@ int main(int argc, char **argv) {
     traps_sound_init();
     traps_time_init();
     runtime_system_resources();
+    { extern void native_init(void); native_init(); }
+    if (headless) signal(SIGTERM, on_term);
     if (!headless && platform_init(scale)) return 1;
     if (loader_launch(app)) return 1;
     cpu_set_idle_hook(runtime_idle);
