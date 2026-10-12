@@ -1762,6 +1762,7 @@ uint32_t MDH_AutoFadeSoundIn(uint32_t ticks) {
     W8(gFadeDone, 0);
     W16(gMasterFade, 0);
     int32_t t16 = (int16_t)(uint16_t)ticks;            /* movea.w (0xa,A6): low word */
+    if (t16 == 0) port_divide_by_zero(__func__);       /* the original takes a 68k divide-by-zero exception */
     W16(gFadeStep, (uint16_t)(0x400 / t16));
     W16(gFadeTicks, (uint16_t)((int32_t)ticks / 4));
     W16(gFadeCounter, (uint16_t)((int32_t)ticks / 4));
@@ -1776,6 +1777,7 @@ uint32_t MDH_AutoFadeSoundOut(uint32_t ticks) {
     W8(gFadeDone, 0);
     W16(gMasterFade, 0x100);
     int32_t t16 = (int16_t)(uint16_t)ticks;
+    if (t16 == 0) port_divide_by_zero(__func__);       /* the original takes a 68k divide-by-zero exception */
     W16(gFadeStep, (uint16_t)(0x400 / t16));
     W16(gFadeTicks, (uint16_t)((int32_t)ticks / 4));
     W16(gFadeCounter, (uint16_t)((int32_t)ticks / 4));

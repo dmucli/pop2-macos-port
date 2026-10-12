@@ -196,6 +196,13 @@ void native_init(void) {
 
 void native_set_a5(maddr a5) { g_a5 = a5; }
 
+void port_divide_by_zero(const char *where) {
+    extern void runtime_quit(void);
+    fprintf(stderr, "*** division by zero in %s (the original Mac game stops with a system error here)\n", where);
+    runtime_quit();
+    _exit(1);
+}
+
 maddr fn_address(int i) {
     const FnInfo *f = &fn_info[i];
     maddr h = loader_segment_handle((int16_t)f->seg);

@@ -188,6 +188,19 @@ in D4) may be reproduced with `cpu_get(R_D4)`, with a comment.
 
 **Functions that never return** in a run (main loops, `main_`): `"nocheck": true`.
 
+**Registers that leak into a 68k callee's result.** Some original callees return with a
+register they never set (e.g. the high word of D0 they were entered with). When you call
+such a routine, set the register first as the original had it: `cpu_set(R_D0, snd << 3);`
+before the call. Likewise, a ported routine whose D0 depends on its entry registers reads
+them with `cpu_get`.
+
+**Divisions** that can be by zero in the original (a 68k exception): guard them with
+`if (d == 0) port_divide_by_zero(__func__);` — never let the host trap.
+
+**Pascal functions without a result slot in the index.** If a Pascal function writes a
+result above its arguments but the index says it has none, callers read garbage (this kept
+the MIDI music from starting): add `"ret": 2/4, "retslot": true` for it.
+
 **Other conventions**
 * Constants in the code segment (PC-relative strings): `fn_address(FN_SomeFnInSameSeg) + delta`.
 * Pascal function pointers (e.g. the SectRect/UnionRect addresses cached at A5-0x1f58..):
