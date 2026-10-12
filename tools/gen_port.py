@@ -92,7 +92,7 @@ def gen_functions(idx, ported):
         for p in f['params']:
             o = p['off'] - 4
             args_read.append('(int16_t)rd16(sp + %d)' % o if p['size'] <= 2 else 'rd32(sp + %d)' % o)
-        if f.get('conv') == 'manual':
+        if f.get('conv') == 'manual' and f['name'] in ported:
             # register-convention routine: the port supplies `void glue_Name(void)` itself
             c.append('void glue_%s(void);' % f['name'])
             continue
@@ -131,7 +131,7 @@ def gen_functions(idx, ported):
     c.append('')
     c.append('const FnInfo fn_info[FN_COUNT] = {')
     for f in idx:
-        glue = 'glue_' + f['name'] if (f['name'] in ported or f.get('conv') == 'manual') else 'NULL'
+        glue = 'glue_' + f['name'] if f['name'] in ported else 'NULL'
         ret = f.get('ret', 4)
         if f.get('ret_override') is not None: ret = f['ret_override']
         c.append('    {"%s", %d, 0x%05x, %d, %s, %d},' % (f['name'], f['seg'], f['segoff'],
