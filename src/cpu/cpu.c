@@ -123,6 +123,7 @@ static uint8_t thunk_is_hook[THUNK_COUNT];
 static uint64_t thunk_calls[THUNK_COUNT];
 /* Optional wrapper around ported-function hooks (differential checking). */
 void (*cpu_hook_runner)(NativeFn fn, const char *name, maddr entry);
+maddr port_glue_sp;   /* SP when 68k code entered the current ported function (see port.h ENTRY) */
 void cpu_print_native_stats(void) {
     for (unsigned i = 0; i < THUNK_COUNT; i++)
         if (thunk_is_hook[i]) fprintf(stderr, "[native] %-36s %llu calls\n", thunk_name[i], (unsigned long long)thunk_calls[i]);
@@ -168,7 +169,13 @@ static int linef_hook(unsigned int op) {
     cur_trap_word = 0;
     if (thunk_is_hook[i]) {
         thunk_calls[i]++;
-        if (cpu_hook_runner) { cpu_hook_runner(thunk_fn[i], thunk_name[i], pc); cpu_set(R_PC, trap_ret); return 1; }
+        maddr saved_glue_sp = port_glue_sp, ret = trap_ret;
+        port_glue_sp = cpu_get(R_SP);          /* the ported function's args start here */
+        if (cpu_hook_runner) cpu_hook_runner(thunk_fn[i], thunk_name[i], pc);
+        else thunk_fn[i]();
+        port_glue_sp = saved_glue_sp;
+        cpu_set(R_PC, ret);
+        return 1;
     }
     thunk_fn[i]();
     cpu_set(R_PC, trap_ret);

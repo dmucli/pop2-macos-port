@@ -15,6 +15,7 @@
 
 /* 0006de24 */
 uint32_t DrawRoofBackWall(void) {
+    ENTRY_LINK(FN_DrawRoofBackWall, 4, 16);      /* link -4; movem A2/D3-D5 */
     uint32_t item = R32(gCurBFItem);
     uint16_t shape = RU16(item + 0x16) & 0x3f;
     if (shape == 0) return 0;
@@ -48,6 +49,7 @@ uint32_t DrawRoofBackWall(void) {
 
 /* 0006dfae: add the floor-edge piece that matches the neighbouring cell */
 uint32_t FUN_0006dfae(void) {
+    ENTRY_NOLINK(FN_FUN_0006dfae, 12);           /* movem A2/D3/D4 */
     uint32_t item = R32(gCurBFItem);
     int16_t idx = (int16_t)(((RU16(item + 0x14) & 0xf00) >> 8) - 1);
     if (idx < 0) return 0;
@@ -68,6 +70,7 @@ uint32_t FUN_0006dfae(void) {
 
 /* 0006df5e */
 uint32_t FUN_0006df5e(void) {
+    ENTRY_NOLINK(FN_FUN_0006df5e, 8);            /* movem A2/D3 */
     uint32_t item = R32(gCurBFItem);
     if (R16(item + 10) != 1) return 0;
     uint32_t pieces = R32(gLevelPieces);
@@ -82,6 +85,7 @@ uint32_t FUN_0006df5e(void) {
 
 /* 0006e5b8: switch between the two rooftop palettes depending on the room */
 uint32_t RoofCheckPalette(int16_t room) {
+    ENTRY_LINK(FN_RoofCheckPalette, 0, 8);       /* link 0; movem D3/D4 */
     int16_t sel = -1;
     if (LEVEL_TYPE() == 5 && room != 0x13 && room != 0x10 && room != 0xf) {
         if (R16(gRoofPalette) != 0) { W16(gRoofPalette, 0); sel = 0; }

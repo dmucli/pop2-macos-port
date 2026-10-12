@@ -57,7 +57,7 @@ static inline maddr port_peek(maddr a) { if ((a & ADDR_MASK) - 0x168u < 6u) runt
 #define FRAME_END(name)    emu_set_sp(name##__sp)
 
 /* ---- calling original 68k functions / Toolbox traps ---- */
-typedef struct { const char *name; int seg; uint32_t segoff; int jt_a5off; void (*glue)(void); int ret_bytes; } FnInfo;
+typedef struct { const char *name; int seg; uint32_t segoff; int jt_a5off; void (*glue)(void); int ret_bytes; int arg_bytes; } FnInfo;
 extern const FnInfo fn_info[];
 uint32_t call68_fn(int fn_index);              /* args already on the emulated stack */
 uint32_t call68_addr(maddr addr);              /* call 68k code at an emulated address */
@@ -73,6 +73,28 @@ void tb_end(void);
  * ('w' = 16-bit, 'l' = 32-bit), e.g. call_ptr(p, "wl", 5, addr). */
 #define JT_ADDR(fn)  ((maddr)(g_a5 + fn_info[fn].jt_a5off))
 uint32_t call_ptr(maddr fn, const char *fmt, ...);
+
+/* ---- stack fidelity: ENTRY_LINK / ENTRY_NOLINK ----
+ * 68k code reached from a ported function (callees, Toolbox callbacks, the File Manager
+ * code that stores stack addresses in globals) must see the same SP as in the original.
+ * Every ported function that calls anything starts with one of:
+ *   ENTRY_LINK(FN_Name, link, regbytes)  original starts "link.w A6,#-link; movem.l <regs>,-(SP)"
+ *                                        (regbytes = 4 * number of saved registers);
+ *                                        a6 is the original A6: locals are at a6 - k
+ *   ENTRY_NOLINK(FN_Name, regbytes)      original has no link (regbytes may be 0)
+ * They reserve what the original's entry used below its arguments (return address, saved
+ * A6, locals, saved registers) and, when the function is called from C rather than from
+ * 68k code, also the argument bytes the original caller would have pushed. The space is
+ * released automatically on every return. Locals whose address escapes can live at their
+ * original offsets (a6 - k) instead of a separate FRAME(). */
+extern maddr port_glue_sp;
+static inline void port_leave(maddr *sp) { emu_set_sp(*sp); }
+#define ENTRY_(fn, n) \
+    maddr entry_sp_ __attribute__((cleanup(port_leave))) = emu_sp(); \
+    const maddr args_ = entry_sp_ == port_glue_sp ? entry_sp_ : entry_sp_ - (uint32_t)fn_info[fn].arg_bytes; \
+    emu_set_sp(args_ - (uint32_t)(n)); (void)args_
+#define ENTRY_LINK(fn, link, regbytes)  ENTRY_(fn, 8 + (link) + (regbytes)); const maddr a6 = args_ - 8; (void)a6
+#define ENTRY_NOLINK(fn, regbytes)      ENTRY_(fn, 4 + (regbytes))
 
 /* Signed views of uniform return values */
 #define S16(x) ((int16_t)(x))

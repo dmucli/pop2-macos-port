@@ -139,8 +139,15 @@ def gen_functions(idx, ported):
         glue = 'glue_' + f['name'] if f['name'] in ported else 'NULL'
         ret = f.get('ret', 4)
         if f.get('ret_override') is not None: ret = f['ret_override']
-        c.append('    {"%s", %d, 0x%05x, %d, %s, %d},' % (f['name'], f['seg'], f['segoff'],
-                                                       f['jt'] if f['jt'] else 0, glue, ret))
+        # bytes the original caller pushes: the arguments (+ the Pascal result slot)
+        span = max([p['off'] - 4 + (2 if p['size'] <= 2 else 4) for p in f['params']] or [0])
+        pascal = f.get('conv') == 'pascal'
+        if pascal and f.get('purge') is not None: span = f['purge']
+        span = (span + 1) & ~1
+        rb = (f.get('ret_override', f.get('ret', 0)) or 0) if (pascal and f.get('retslot', True)) else 0
+        span += (2 if rb in (1, 2) else 4) if rb else 0
+        c.append('    {"%s", %d, 0x%05x, %d, %s, %d, %d},' % (f['name'], f['seg'], f['segoff'],
+                                                       f['jt'] if f['jt'] else 0, glue, ret, span))
     c.append('};')
     open(os.path.join(GEN, 'glue.c'), 'w').write('\n'.join(c) + '\n')
 
