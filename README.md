@@ -13,6 +13,26 @@ it asks for that file and remembers it. Saved games and settings are written to
 
 This is an unofficial fan project, not affiliated with or endorsed by the rights holders.
 
+## Extras
+
+Additions of this port, outside the original game (they are off in the verification runs):
+
+| Where | What |
+| --- | --- |
+| Extras > Infinite Health | the kid's life is refilled every frame (falls and traps still kill) |
+| Extras > Infinite Time | the clock stops |
+| Extras > Cheat Mode | the game's own debug mode (as when 1 2 3 are held at launch): `-`/`+` change the time, Command-L next level on any level; the letter keys no longer move |
+| Extras > Skip to Next Level (Option-Command-N) | turns on Cheat Mode and uses the game's Command-L |
+| F5 / F9 (Option-Command-S / -L) | quick save / quick load, within the level being played |
+| hold Delete | rewind (about 15 seconds; Extras > Rewind turns it off) |
+| Extras > Remember Copy Protection Answer | after one right answer, the question is not asked again (on this Mac) |
+| Extras > Controls... | choose the keys; game controllers work too (d-pad/stick, A action, B second button, Start pause, left shoulder rewind, right shoulder / Y quick save / load) |
+| View | Pixels, Sharp Pixels (whole multiples), Smooth, CRT Scanlines |
+
+Game keys: arrows (or keypad) move, Shift or keypad `.` is the action button (grab,
+strike, careful step), Control or keypad `0` the second button, Esc pauses, Space shows the
+time left.
+
 ## Build
 
 Requirements: Xcode command line tools, SDL2 from Homebrew (`brew install sdl2`).

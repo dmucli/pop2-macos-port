@@ -1,7 +1,10 @@
 /* SDL2 platform: window + 8-bit framebuffer presentation, input, audio init. */
 #include "../mac/qd.h"
+#include "../mac/mac.h"
+#include "platform.h"
 #include <SDL.h>
 #include <stdio.h>
+#include <string.h>
 
 int  sound_init(void);
 void event_key(int down, uint8_t keycode, uint8_t ch, uint16_t mods, int repeat);
@@ -19,8 +22,12 @@ static uint32_t last_present_ms;
 static uint32_t rgb[256];
 static int cursor_visible = 1;
 
+static SDL_Texture *crt_tex;
+static int display_mode = -1;
+static void apply_display_mode(void);
+
 int platform_init(int scale) {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS) != 0) { fprintf(stderr, "SDL: %s\n", SDL_GetError()); return -1; }
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0) { fprintf(stderr, "SDL: %s\n", SDL_GetError()); return -1; }
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_SetHint(SDL_HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK, "0");
     if (scale < 1) scale = 1;
@@ -35,6 +42,8 @@ int platform_init(int scale) {
     SDL_RenderSetLogicalSize(ren, qd_screen_w, qd_screen_h);
     tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, qd_screen_w, qd_screen_h);
     headless = 0;
+    apply_display_mode();
+    input_load_keys();
     sound_init();
     return 0;
 }
@@ -48,8 +57,27 @@ void platform_present(void) {
         last_clut = qd_clut_version;
     }
     void *pixels; int pitch;
-    if (SDL_LockTexture(tex, NULL, &pixels, &pitch) == 0) {
-        const uint8_t *src = mptr(SCREEN_BASE);
+    const uint8_t *src = mptr(SCREEN_BASE);
+    if (display_mode == DISPLAY_CRT && crt_tex) {
+        /* CRT: each pixel becomes 3x3, the third line of each row dimmed (scanlines) and
+         * the columns tinted slightly (aperture grille); then scaled smoothly */
+        if (SDL_LockTexture(crt_tex, NULL, &pixels, &pitch) == 0) {
+            for (int y = 0; y < qd_screen_h; y++) {
+                const uint8_t *s = src + y * qd_screen_w;
+                uint32_t *d0 = (uint32_t *)((uint8_t *)pixels + (3 * y) * pitch);
+                uint32_t *d1 = (uint32_t *)((uint8_t *)d0 + pitch), *d2 = (uint32_t *)((uint8_t *)d1 + pitch);
+                for (int x = 0; x < qd_screen_w; x++) {
+                    uint32_t c = rgb[s[x]];
+                    uint32_t dim = 0xFF000000u | ((c >> 1) & 0x7F7F7F) + ((c >> 3) & 0x1F1F1F);   /* ~62% */
+                    uint32_t soft = 0xFF000000u | ((c >> 1) & 0x7F7F7F) + ((c >> 2) & 0x3F3F3F);  /* ~75% */
+                    d0[3 * x] = soft; d0[3 * x + 1] = c; d0[3 * x + 2] = soft;
+                    d1[3 * x] = soft; d1[3 * x + 1] = c; d1[3 * x + 2] = soft;
+                    d2[3 * x] = d2[3 * x + 1] = d2[3 * x + 2] = (0xFF000000u | ((dim >> 1) & 0x7F7F7F));
+                }
+            }
+            SDL_UnlockTexture(crt_tex);
+        }
+    } else if (SDL_LockTexture(tex, NULL, &pixels, &pitch) == 0) {
         for (int y = 0; y < qd_screen_h; y++) {
             uint32_t *d = (uint32_t *)((uint8_t *)pixels + y * pitch);
             const uint8_t *s = src + y * qd_screen_w;
@@ -59,8 +87,28 @@ void platform_present(void) {
     }
     SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
     SDL_RenderClear(ren);
-    SDL_RenderCopy(ren, tex, NULL, NULL);
+    SDL_RenderCopy(ren, display_mode == DISPLAY_CRT && crt_tex ? crt_tex : tex, NULL, NULL);
     SDL_RenderPresent(ren);
+}
+
+/* ---- display modes (View menu) ---- */
+static void apply_display_mode(void) {
+    if (display_mode < 0) display_mode = macos_pref_int("Display.Mode", DISPLAY_PIXELS);
+    if (headless) return;
+    SDL_SetTextureScaleMode(tex, display_mode == DISPLAY_SMOOTH ? SDL_ScaleModeLinear : SDL_ScaleModeNearest);
+    SDL_RenderSetIntegerScale(ren, display_mode == DISPLAY_SHARP ? SDL_TRUE : SDL_FALSE);
+    if (display_mode == DISPLAY_CRT && !crt_tex) {
+        crt_tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, qd_screen_w * 3, qd_screen_h * 3);
+        if (crt_tex) SDL_SetTextureScaleMode(crt_tex, SDL_ScaleModeLinear);
+    }
+}
+int  platform_display_mode(void) { if (display_mode < 0) display_mode = macos_pref_int("Display.Mode", DISPLAY_PIXELS); return display_mode; }
+void platform_set_display_mode(int m) {
+    display_mode = m;
+    macos_pref_set_int("Display.Mode", m);
+    apply_display_mode();
+    last_clut = ~qd_clut_version;
+    platform_present();
 }
 
 void platform_present_if_due(void) {
@@ -177,6 +225,7 @@ void platform_poll(void) {
                 int kc = mac_keycode(e.key.keysym.scancode);
                 event_modifiers_changed(mods);
                 if (kc < 0 || (kc >= 0x37 && kc <= 0x3E)) break;
+                if (input_key(e.type == SDL_KEYDOWN, kc, mods, e.key.repeat)) break;   /* remapped / Extras */
                 event_key(e.type == SDL_KEYDOWN, (uint8_t)kc, mac_char(e.key.keysym.sym, mods), mods, e.key.repeat);
                 break;
             }
@@ -184,6 +233,10 @@ void platform_poll(void) {
             case SDL_MOUSEBUTTONDOWN: case SDL_MOUSEBUTTONUP:
                 event_mouse_move(e.button.x, e.button.y);
                 event_mouse_button(e.type == SDL_MOUSEBUTTONDOWN);
+                break;
+            case SDL_CONTROLLERDEVICEADDED: case SDL_CONTROLLERDEVICEREMOVED:
+            case SDL_CONTROLLERBUTTONDOWN: case SDL_CONTROLLERBUTTONUP: case SDL_CONTROLLERAXISMOTION:
+                input_controller_event(&e);
                 break;
             case SDL_WINDOWEVENT:
                 if (e.window.event == SDL_WINDOWEVENT_EXPOSED) platform_present();

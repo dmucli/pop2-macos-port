@@ -441,3 +441,27 @@ uint16_t GetResFileAttrs(int16_t refnum) { ResFile *f = file_by_ref(refnum); ret
 void SetResFileAttrs(int16_t refnum, uint16_t a) { ResFile *f = file_by_ref(refnum); if (f) f->attrs = a; }
 void SetResPurge(int install) { (void)install; }
 int32_t rsrc_size(maddr h) { Ref *r; return locate(h, NULL, NULL, &r) ? (int32_t)r->len : -1; }
+
+/* save states (src/mac/mods.c): the handle and attributes of every resource reference.
+ * The file/type/reference structure itself must be unchanged for a restore. */
+static void rsrc_walk(int (*fn)(Ref *r, void *ctx), void *ctx) {
+    for (ResFile *f = chain; f; f = f->next)
+        for (int t = 0; t < f->ntypes; t++)
+            for (int k = 0; k < f->types[t].nrefs; k++) if (fn(&f->types[t].refs[k], ctx)) return;
+}
+static int count_ref(Ref *r, void *ctx) { (void)r; (*(size_t *)ctx)++; return 0; }
+size_t rsrc_state_size(void) { size_t n = 0; rsrc_walk(count_ref, &n); return sizeof(uint32_t) + n * 5; }
+typedef struct { uint8_t *p; } RsCur;
+static int save_ref(Ref *r, void *ctx) { RsCur *c = ctx; put32(c->p, r->handle); c->p[4] = r->attrs; c->p += 5; return 0; }
+static int restore_ref(Ref *r, void *ctx) { RsCur *c = ctx; r->handle = be32(c->p); r->attrs = c->p[4]; c->p += 5; return 0; }
+void rsrc_state_save(uint8_t *out) {
+    size_t n = 0; rsrc_walk(count_ref, &n);
+    put32(out, (uint32_t)n);
+    RsCur c = { out + 4 }; rsrc_walk(save_ref, &c);
+}
+int rsrc_state_load(const uint8_t *in) {
+    size_t n = 0; rsrc_walk(count_ref, &n);
+    if (be32(in) != n) return 0;                 /* a resource file was opened or closed */
+    RsCur c = { (uint8_t *)in + 4 }; rsrc_walk(restore_ref, &c);
+    return 1;
+}

@@ -147,3 +147,16 @@ void macos_set_app_icon(const uint8_t *rgba, int w, int h) {
         if (dump) [[rep representationUsingType:NSBitmapImageFileTypePNG properties:@{}] writeToFile:@(dump) atomically:YES];
     }
 }
+
+/* ---- settings (NSUserDefaults) ---- */
+int macos_pref_int(const char *key, int def) {
+    @autoreleasepool {
+        NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
+        NSString *k = [NSString stringWithUTF8String:key];
+        return [d objectForKey:k] ? (int)[d integerForKey:k] : def;
+    }
+}
+void macos_pref_set_int(const char *key, int v) {
+    @autoreleasepool { [[NSUserDefaults standardUserDefaults] setInteger:v forKey:[NSString stringWithUTF8String:key]]; }
+}
+void macos_beep(void) { NSBeep(); }

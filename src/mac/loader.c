@@ -136,3 +136,6 @@ void traps_loader_init(void) {
     trap_register(0xA9F4, T_ExitToShell);
     trap_register(0xA9F5, T_GetAppParms);
 }
+
+/* save states (src/mac/mods.c): loaded CODE segments */
+void *loader_state(size_t *n) { *n = sizeof seg_handles; return seg_handles; }

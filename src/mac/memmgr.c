@@ -370,3 +370,6 @@ void PurgeMem(uint32_t need) { purge_some(cur_heap(), need); }
 int mm_heap_index(maddr zone) { return zone == heaps[0].zone ? 0 : 1; }
 int mm_is_block(maddr p) { return valid_block(p); }
 int mm_is_handle(maddr h) { maddr b = hblock(h); return b && rd32(b + 8) == (h & ADDR_MASK); }
+
+/* save states (src/mac/mods.c): host-side Memory Manager state */
+void *mm_state(size_t *n) { *n = sizeof mp_free; return &mp_free; }

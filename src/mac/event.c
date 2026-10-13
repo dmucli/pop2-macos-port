@@ -294,3 +294,6 @@ void event_script_tick(uint64_t now_ms) {
         fprintf(stderr, "[input] %llu ms key %02x %s\n", (unsigned long long)now_ms, e->code, e->down ? "down" : "up");
     }
 }
+
+/* save states (src/mac/mods.c): forget queued events and held keys after a restore */
+void event_clear_queue(void) { qhead = qtail = 0; event_release_all(); }

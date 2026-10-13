@@ -236,6 +236,8 @@ void runtime_idle(void) {
     sound_service();
     { extern void event_script_tick(uint64_t now_ms); event_script_tick(runtime_us() / 1000); }
     snapshot();
+    test_pokes();
+    mods_tick();
     platform_poll();
     platform_present_if_due();
 }

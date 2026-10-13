@@ -500,3 +500,13 @@ int16_t PBGetFCBInfo(maddr pb, int async) {
 }
 
 int fm_close_all(void) { for (int i = 0; i < MAX_FCB; i++) if (fcbs[i].used) { vfs_flush(fcbs[i].node); fcbs[i].used = 0; } return 0; }
+
+/* save states (src/mac/mods.c): open files, working directories, default directory */
+void *file_state(int i, size_t *n) {
+    switch (i) {
+        case 0: *n = sizeof fcbs; return fcbs;
+        case 1: *n = sizeof wds; return wds;
+        case 2: *n = sizeof default_dir; return &default_dir;
+        default: *n = 0; return NULL;
+    }
+}

@@ -164,3 +164,21 @@ void traps_time_init(void) {
     trap_register(0xA9C6, T_SecondsToDate);
     trap_register(0xA9C7, T_DateToSeconds);
 }
+
+/* save states (src/mac/mods.c): Time Manager and VBL queues. Due times are saved relative
+ * to now and shifted on restore, so a restored task does not fire as if it were late. */
+size_t time_state_size(void) { return sizeof tm + sizeof vbl; }
+void time_state_save(uint8_t *out) {
+    TmEntry t[MAX_TM]; memcpy(t, tm, sizeof tm);
+    uint64_t now = runtime_us();
+    for (int i = 0; i < MAX_TM; i++) {
+        t[i].due = t[i].due > now ? t[i].due - now : 0;
+        t[i].wake = t[i].wake > now ? t[i].wake - now : 0;
+    }
+    memcpy(out, t, sizeof tm); memcpy(out + sizeof tm, vbl, sizeof vbl);
+}
+void time_state_load(const uint8_t *in) {
+    memcpy(tm, in, sizeof tm); memcpy(vbl, in + sizeof tm, sizeof vbl);
+    uint64_t now = runtime_us();
+    for (int i = 0; i < MAX_TM; i++) { tm[i].due += now; if (tm[i].wake) tm[i].wake += now; }
+}

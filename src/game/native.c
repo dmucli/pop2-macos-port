@@ -170,6 +170,7 @@ static int in_list(const char *list, const char *name) {
 #define CODERES_SEG 1000
 #define CODERES_MAX 8
 static maddr coderes_handle[CODERES_MAX];
+void *native_state(size_t *n) { *n = sizeof coderes_handle; return coderes_handle; }   /* save states */
 void native_coderes_loaded(int slot, maddr handle) {
     if (slot < 0 || slot >= CODERES_MAX || !handle || !rd32(handle)) return;
     coderes_handle[slot] = handle;
@@ -298,6 +299,8 @@ uint32_t call_ptr(maddr fn, const char *fmt, ...) {
  * emulated stack by the nat_ wrapper, entered through its glue exactly as a 68k caller would
  * enter it (minus the CPU): the function sees its real argument slots and stack depth. */
 uint32_t call_native_fn(int i) {
+    if (i == FN_FUN_00016654) mods_frame();             /* start of a game frame (Extras) */
+    else if (i == FN_FUN_0001652c) mods_level_start();  /* a level's frame loop */
     /* like "jsr off(A5)": while the function's segment is not loaded, enter through the jump
      * table (the _LoadSeg trap, patched by THINK C, loads the CODE resource and advances the
      * clock); the call then reaches the native function through its hook */

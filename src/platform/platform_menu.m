@@ -8,6 +8,8 @@
  *    chosen item (platform_menu_pending). */
 #import <Cocoa/Cocoa.h>
 #include "../mac/mem.h"
+#include "../mac/mods.h"
+#include "platform.h"
 
 int   wm_menu_count(void);
 maddr wm_menu_handle(int i);
@@ -15,6 +17,8 @@ void  event_menu_command_key(uint8_t ch);
 void  event_menu_click(void);
 void  platform_toggle_fullscreen(void);
 void  runtime_quit(void);
+void  event_release_all(void);
+static void controls_window(void);
 
 static int dirty = 1;
 static uint32_t pending;
@@ -57,6 +61,13 @@ static int game_items(maddr h, GameItem *out, int max) {
     else { pending = (uint32_t)item.tag; event_menu_click(); }
 }
 - (void)fullscreen:(id)sender { (void)sender; platform_toggle_fullscreen(); }
+/* Extras */
+- (void)toggleMod:(NSMenuItem *)item { mods_set((int)item.tag, !mods_get((int)item.tag)); platform_menu_sync(); }
+- (void)nextLevel:(id)sender { (void)sender; mods_next_level(); platform_menu_sync(); }
+- (void)quickSave:(id)sender { (void)sender; if (mods_playing()) mods_quick_save(0); else NSBeep(); }
+- (void)quickLoad:(id)sender { (void)sender; if (mods_playing() && mods_slot_used(0)) mods_quick_load(0); else NSBeep(); }
+- (void)controls:(id)sender { (void)sender; controls_window(); }
+- (void)displayMode:(NSMenuItem *)item { platform_set_display_mode((int)item.tag); platform_menu_sync(); }
 /* Quit goes through the game's own Quit item when it has one (so it can save settings). */
 - (void)quit:(id)sender {
     (void)sender;
@@ -146,7 +157,38 @@ void platform_menu_update(void) {
             top.enabled = (rd32(m + 10) & 1) != 0;
         }
 
+        NSMenu *ex = [[NSMenu alloc] initWithTitle:@"Extras"];
+        ex.autoenablesItems = NO;
+        static NSString *const mod_titles[MOD_COUNT] = { @"Cheat Mode", @"Infinite Time", @"Infinite Health",
+                                                          @"Rewind (hold Delete)", @"Remember Copy Protection Answer" };
+        const int order[] = { MOD_INFINITE_HEALTH, MOD_INFINITE_TIME, MOD_CHEAT_MODE, -1 };
+        for (int i = 0; order[i] >= 0; i++) {
+            NSMenuItem *it = add(ex, mod_titles[order[i]], @selector(toggleMod:), nil, 1);
+            it.tag = order[i]; it.state = mods_get(order[i]) ? NSControlStateValueOn : NSControlStateValueOff;
+        }
+        NSMenuItem *nl = add(ex, @"Skip to Next Level", @selector(nextLevel:), @"n", 1);
+        nl.keyEquivalentModifierMask = NSEventModifierFlagOption | NSEventModifierFlagCommand;
+        [ex addItem:[NSMenuItem separatorItem]];
+        NSMenuItem *qs = add(ex, @"Quick Save (F5)", @selector(quickSave:), @"s", 1);
+        qs.keyEquivalentModifierMask = NSEventModifierFlagOption | NSEventModifierFlagCommand;
+        NSMenuItem *ql = add(ex, @"Quick Load (F9)", @selector(quickLoad:), @"l", 1);
+        ql.keyEquivalentModifierMask = NSEventModifierFlagOption | NSEventModifierFlagCommand;
+        NSMenuItem *rw = add(ex, mod_titles[MOD_REWIND], @selector(toggleMod:), nil, 1);
+        rw.tag = MOD_REWIND; rw.state = mods_get(MOD_REWIND) ? NSControlStateValueOn : NSControlStateValueOff;
+        [ex addItem:[NSMenuItem separatorItem]];
+        NSMenuItem *cp = add(ex, mod_titles[MOD_REMEMBER_COPYPROT], @selector(toggleMod:), nil, 1);
+        cp.tag = MOD_REMEMBER_COPYPROT; cp.state = mods_get(MOD_REMEMBER_COPYPROT) ? NSControlStateValueOn : NSControlStateValueOff;
+        add(ex, @"Controls\u2026", @selector(controls:), nil, 1);
+        [bar addItemWithTitle:@"Extras" action:NULL keyEquivalent:@""].submenu = ex;
+
         NSMenu *win = [[NSMenu alloc] initWithTitle:@"View"];   /* not "Window": AppKit would add its own items */
+        win.autoenablesItems = NO;
+        static NSString *const disp[DISPLAY_COUNT] = { @"Pixels", @"Sharp Pixels (whole multiples)", @"Smooth", @"CRT Scanlines" };
+        for (int m = 0; m < DISPLAY_COUNT; m++) {
+            NSMenuItem *it = add(win, disp[m], @selector(displayMode:), nil, 1);
+            it.tag = m; it.state = platform_display_mode() == m ? NSControlStateValueOn : NSControlStateValueOff;
+        }
+        [win addItem:[NSMenuItem separatorItem]];
         NSMenuItem *fs = add(win, @"Toggle Full Screen", @selector(fullscreen:), @"f", 1);
         fs.keyEquivalentModifierMask = NSEventModifierFlagControl | NSEventModifierFlagCommand;
         [bar addItemWithTitle:@"View" action:NULL keyEquivalent:@""].submenu = win;
@@ -181,5 +223,103 @@ void platform_menu_early_init(void) {
         [[NSUserDefaults standardUserDefaults] registerDefaults:@{
             @"NSDisabledDictationMenuItem": @YES, @"NSDisabledCharacterPaletteMenuItem": @YES,
             @"NSDisabledAutoFillMenuItem": @YES, @"NSDisabledAutoFillHeuristicMenuItem": @YES }];
+    }
+}
+
+/* ---- Extras > Controls...: one row per action, click a button then press a key ---- */
+@interface PoPKeyCatcher : NSView
+@property int action;            /* the action waiting for a key, -1 = none */
+@property(copy) void (^done)(int keycode);
+@end
+@implementation PoPKeyCatcher
+- (BOOL)acceptsFirstResponder { return YES; }
+- (void)keyDown:(NSEvent *)e {
+    if (self.action < 0) { [super keyDown:e]; return; }
+    int k = e.keyCode;
+    if (k == 0x35) k = -2;       /* Esc: cancel */
+    self.done(k);
+}
+@end
+
+@interface PoPControls : NSObject <NSWindowDelegate>
+@property(strong) NSWindow *w;
+@property(strong) NSMutableArray<NSButton *> *buttons;
+@property(strong) PoPKeyCatcher *catcher;
+@end
+@implementation PoPControls
+- (void)refresh {
+    for (int a = 0; a < ACT_COUNT; a++)
+        self.buttons[a].title = [NSString stringWithUTF8String:input_key_name(input_action_key(a))];
+}
+- (void)pick:(NSButton *)b {
+    int a = (int)b.tag;
+    for (NSButton *o in self.buttons) o.enabled = NO;
+    b.title = @"Press a key\u2026";
+    self.catcher.action = a;
+    __weak PoPControls *me = self;
+    self.catcher.done = ^(int k) {
+        if (k != -2) input_set_action_key(a, k);
+        me.catcher.action = -1;
+        for (NSButton *o in me.buttons) o.enabled = YES;
+        [me refresh];
+    };
+    [self.w makeFirstResponder:self.catcher];
+}
+- (void)defaults:(id)sender {
+    (void)sender;
+    for (int a = 0; a < ACT_COUNT; a++) input_set_action_key(a, -1);
+    for (int a = 0; a < ACT_COUNT; a++) input_set_action_key(a, input_action_default_key(a));
+    [self refresh];
+}
+- (void)close:(id)sender { (void)sender; [NSApp stopModal]; }
+- (void)windowWillClose:(NSNotification *)n { (void)n; [NSApp stopModal]; }
+@end
+
+static void controls_window(void) {
+    @autoreleasepool {
+        PoPControls *c = [[PoPControls alloc] init];
+        const CGFloat rowh = 30, top = 70, wdt = 470;
+        CGFloat h = top + ACT_COUNT * rowh + 60;
+        c.w = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, wdt, h)
+                                          styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable
+                                            backing:NSBackingStoreBuffered defer:NO];
+        c.w.title = @"Controls";
+        c.w.releasedWhenClosed = NO;
+        c.w.delegate = c;
+        c.catcher = [[PoPKeyCatcher alloc] initWithFrame:NSMakeRect(0, 0, wdt, h)];
+        c.catcher.action = -1;
+        c.w.contentView = c.catcher;
+        NSTextField *info = [NSTextField wrappingLabelWithString:
+            @"Click an action, then press its new key (Esc cancels). The default keys keep working, "
+             "and Shift and Control stay the action and second buttons. "
+             "Game controller: d-pad or stick, A action, B second button, Start pause, "
+             "left shoulder rewind, right shoulder / Y quick save / load."];
+        info.frame = NSMakeRect(20, h - top + 4, wdt - 40, top - 14);
+        info.font = [NSFont systemFontOfSize:11];
+        [c.catcher addSubview:info];
+        c.buttons = [NSMutableArray array];
+        for (int a = 0; a < ACT_COUNT; a++) {
+            CGFloat y = h - top - (a + 1) * rowh;
+            NSTextField *l = [NSTextField labelWithString:[NSString stringWithUTF8String:input_action_name(a)]];
+            l.frame = NSMakeRect(20, y + 4, 260, 20);
+            [c.catcher addSubview:l];
+            NSButton *b = [NSButton buttonWithTitle:@"" target:c action:@selector(pick:)];
+            b.frame = NSMakeRect(290, y, 160, 28);
+            b.tag = a;
+            [c.catcher addSubview:b];
+            [c.buttons addObject:b];
+        }
+        NSButton *def = [NSButton buttonWithTitle:@"Restore Defaults" target:c action:@selector(defaults:)];
+        def.frame = NSMakeRect(20, 14, 150, 30);
+        [c.catcher addSubview:def];
+        NSButton *ok = [NSButton buttonWithTitle:@"Done" target:c action:@selector(close:)];
+        ok.frame = NSMakeRect(wdt - 120, 14, 100, 30);
+        ok.keyEquivalent = @"\r";
+        [c.catcher addSubview:ok];
+        [c refresh];
+        [c.w center];
+        [NSApp runModalForWindow:c.w];
+        [c.w orderOut:nil];
+        event_release_all();
     }
 }
