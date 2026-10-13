@@ -141,6 +141,15 @@ the first differing addresses). Functions listed as "never called" were not exer
 review those translations against the disassembly with extra care.
 Bisect with `POP2_NATIVE_EXCLUDE=Name1,Name2` or `POP2_NATIVE_ONLY=...`.
 
+**How calls between ported functions work.** Both builds compile a rewritten copy of the
+game sources (`tools/mkcheck.py`): a call `Foo(a, b)` to a ported function becomes
+`nat_Foo(a, b)` in the normal build and `chk_Foo(a, b)` in the check build. Both push the
+arguments on the emulated stack exactly like the original caller and enter `Foo` through its
+glue (the check build through its 68k entry, so the checker sees the call). So a ported
+function always finds its real argument slots at `args_`/`a6 + 8`, whoever calls it, and the
+callee's D0/D1/A0/A1 stay as it left them, like after a `jsr`. The first call into a segment
+that is not loaded yet goes through the jump table (`_LoadSeg`), like the original.
+
 `check.sh` uses the **check build** (`build/pop2check`, built automatically): a copy of
 the ported sources in which every call to a ported function goes through a generated
 `chk_Name` trampoline that pushes the arguments and enters the function through its 68k
