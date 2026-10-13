@@ -1,0 +1,9 @@
+{
+ "res": "MDRV",
+ "id": 11,
+ "slot": 0,
+ "comment": "SoundMusicSys music driver: decrypted + LZSS-decompressed 'MDRV' 11 (GetDriverCodeResource). Offsets are from the start of the decompressed code (Ghidra program mdrv11.bin, base 0).",
+ "functions": [
+  {"name": "MDRV_Entry", "off": 0, "params": [[4, 4], [8, 4]], "ret": 4}
+ ]
+}

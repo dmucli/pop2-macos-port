@@ -183,6 +183,7 @@ static int linef_hook(unsigned int op) {
 }
 
 /* --------------------------------------------------------- nested call -- */
+static uint32_t callee_scratch[4];
 uint32_t cpu_call_regs(maddr pc, const uint32_t *regs16, uint32_t *a0) {
     static unsigned char ctx[64][4096];
     if (call_depth >= 63) { fprintf(stderr, "cpu_call: too deep\n"); abort(); }
@@ -200,6 +201,7 @@ uint32_t cpu_call_regs(maddr pc, const uint32_t *regs16, uint32_t *a0) {
         cpu_instr_count += m68k_execute(20000);
     }
     uint32_t rd0 = cpu_get(R_D0), ra0 = cpu_get(R_A0);
+    callee_scratch[0] = rd0; callee_scratch[1] = cpu_get(R_D1); callee_scratch[2] = ra0; callee_scratch[3] = cpu_get(R_A1);
     m68k_set_context(ctx[d]);
     call_depth--;
     trap_ret = saved_ret;
@@ -226,6 +228,14 @@ uint32_t cpu_call_irq(maddr pc, uint32_t d0, maddr a0, maddr a1, int nargs, cons
     uint32_t r = cpu_call_regs(pc, regs, NULL);
     irq_depth--;
     cpu_set(R_SP, sp0);
+    return r;
+}
+/* A call made on behalf of 68k-style code (a ported function calling another): like a
+ * "jsr", the callee's scratch registers D0/D1/A0/A1 stay as it left them. */
+uint32_t cpu_call_keep_scratch(maddr pc) {
+    uint32_t r = cpu_call(pc, NULL);
+    cpu_set(R_D0, callee_scratch[0]); cpu_set(R_D1, callee_scratch[1]);
+    cpu_set(R_A0, callee_scratch[2]); cpu_set(R_A1, callee_scratch[3]);
     return r;
 }
 uint32_t cpu_call(maddr pc, uint32_t *a0) {

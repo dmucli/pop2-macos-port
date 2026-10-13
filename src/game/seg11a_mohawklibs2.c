@@ -1488,6 +1488,7 @@ uint32_t GetDriverCodeResource(int16_t id, uint32_t perr) {
             DecryptHandle(h);
             h = DecompressHandle(h);
             if (h == 0) W16(perr, 0xff94);
+            else { extern void native_coderes_loaded(int slot, maddr handle); native_coderes_loaded(0, h); }   /* MDRV: tools/coderes/mdrv.json */
         } else {
             W16(perr, 0xff34);
         }

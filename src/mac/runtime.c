@@ -183,7 +183,7 @@ void runtime_trap_boundary(void) {
             extern void cpu_print_native_stats(void);
             if (getenv("POP2_NATIVE_STATS")) cpu_print_native_stats();
             fprintf(stderr, "exit at virtual %ld ms\n", exit_at);
-            fflush(stderr);
+            fflush(NULL);                       /* stderr and any debug logs (trap log) */
             _exit(0);
         }
     }

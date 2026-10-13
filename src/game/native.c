@@ -49,7 +49,9 @@ static const struct { int32_t a5off; uint32_t stride, byte, count; } check_ignor
     { -0x11e0, 16, 15, 100 },
     { -0x11e4, 16, 15, 100 },
 };
+static int coderes_hook_byte(maddr a);
 static int check_ignored(maddr a) {
+    if (coderes_hook_byte(a)) return 1;
     /* contents of a heap block that is free in both images (same header in both) */
     { extern maddr mm_free_block_header(maddr a);
       maddr b = mm_free_block_header(a);
@@ -164,6 +166,35 @@ static int in_list(const char *list, const char *name) {
     return 0;
 }
 
+/* ---- code resources loaded at run time (see tools/coderes): FnInfo.seg = 1000 + slot ---- */
+#define CODERES_SEG 1000
+#define CODERES_MAX 8
+static maddr coderes_handle[CODERES_MAX];
+void native_coderes_loaded(int slot, maddr handle) {
+    if (slot < 0 || slot >= CODERES_MAX || !handle || !rd32(handle)) return;
+    coderes_handle[slot] = handle;
+    maddr code = rd32(handle) & ADDR_MASK;
+    for (int i = 0; i < FN_COUNT; i++)
+        if (native_enabled[i] && fn_info[i].seg == CODERES_SEG + slot) {
+            uint16_t w = rd16(code + fn_info[i].segoff);
+            if (w != hook_word[i]) orig_word[i] = w;
+            wr16(code + fn_info[i].segoff, hook_word[i]);
+        }
+}
+/* The checker's child may run the original loading code, which installs no hooks:
+ * a hook word in the port's image against the original word in the child is expected. */
+static int coderes_hook_byte(maddr a) {
+    for (int i = 0; i < FN_COUNT; i++) {
+        int s = fn_info[i].seg - CODERES_SEG;
+        if (s < 0 || s >= CODERES_MAX || !native_enabled[i] || !coderes_handle[s]) continue;
+        maddr h = rd32(coderes_handle[s]) & ADDR_MASK;
+        if (!h) continue;
+        maddr e = h + fn_info[i].segoff;
+        if (a == e || a == e + 1) return 1;
+    }
+    return 0;
+}
+
 static void on_segment_loaded(int16_t seg, maddr code) {
     for (int i = 0; i < FN_COUNT; i++)
         if (native_enabled[i] && fn_info[i].seg == seg) {
@@ -212,12 +243,18 @@ void port_divide_by_zero(const char *where) {
 
 maddr fn_address(int i) {
     const FnInfo *f = &fn_info[i];
+    if (f->seg >= CODERES_SEG) {
+        maddr h = coderes_handle[f->seg - CODERES_SEG];
+        if (!h || !rd32(h)) { fprintf(stderr, "fn_address: code resource of %s not loaded\n", f->name); return 0; }
+        return (rd32(h) & ADDR_MASK) + f->segoff;
+    }
     maddr h = loader_segment_handle((int16_t)f->seg);
     if (!h || !rd32(h)) { LoadSeg((int16_t)f->seg); h = loader_segment_handle((int16_t)f->seg); }
     return rd32(h) + f->segoff;
 }
 
-uint32_t call68_addr(maddr addr) { return cpu_call(addr, NULL); }
+uint32_t cpu_call_keep_scratch(maddr pc);
+uint32_t call68_addr(maddr addr) { return cpu_call_keep_scratch(addr); }
 
 #include <stdarg.h>
 uint32_t call_ptr(maddr fn, const char *fmt, ...) {
@@ -233,10 +270,32 @@ uint32_t call_ptr(maddr fn, const char *fmt, ...) {
     return r;
 }
 
+/* Normal build: a ported function called from C, with its arguments already pushed on the
+ * emulated stack by the nat_ wrapper, entered through its glue exactly as a 68k caller would
+ * enter it (minus the CPU): the function sees its real argument slots and stack depth. */
+uint32_t call_native_fn(int i) {
+    /* like "jsr off(A5)": while the function's segment is not loaded, enter through the jump
+     * table (the _LoadSeg trap, patched by THINK C, loads the CODE resource and advances the
+     * clock); the call then reaches the native function through its hook */
+    if (fn_info[i].jt_a5off) {
+        maddr e = g_a5 + fn_info[i].jt_a5off - 2;            /* entry: offset/seg word, then code */
+        if (rd16(e + 2) == 0x3F3C && rd16(e + 6) == 0xA9F0) {
+            extern uint32_t cpu_call_keep_scratch(maddr pc);
+            return cpu_call_keep_scratch(g_a5 + fn_info[i].jt_a5off);
+        }
+    }
+    maddr saved = port_glue_sp;
+    port_glue_sp = emu_sp();
+    fn_info[i].glue();
+    port_glue_sp = saved;
+    return cpu_get(R_D0);
+}
+
 /* Check build: a ported function called from C through its 68k entry (hook + checker). */
 uint32_t call68_fn_chk(int i) {
-    if (fn_info[i].jt_a5off) return cpu_call(g_a5 + fn_info[i].jt_a5off, NULL);
-    return cpu_call(fn_address(i), NULL);
+    extern uint32_t cpu_call_keep_scratch(maddr pc);
+    if (fn_info[i].jt_a5off) return cpu_call_keep_scratch(g_a5 + fn_info[i].jt_a5off);
+    return cpu_call_keep_scratch(fn_address(i));
 }
 uint32_t call68_fn(int i) {
     if (native_enabled[i]) {           /* a ported function reached through a trampoline */
@@ -245,8 +304,8 @@ uint32_t call68_fn(int i) {
     /* Like the original "jsr off(A5)": through the jump table when the function has a
      * slot, so an unloaded segment is brought in by the _LoadSeg trap (THINK C patches
      * it, and the trap advances the deterministic clock exactly like the original). */
-    if (fn_info[i].jt_a5off) return cpu_call(g_a5 + fn_info[i].jt_a5off, NULL);
-    return cpu_call(fn_address(i), NULL);
+    if (fn_info[i].jt_a5off) return cpu_call_keep_scratch(g_a5 + fn_info[i].jt_a5off);
+    return cpu_call_keep_scratch(fn_address(i));
 }
 
 /* ---- Toolbox calls from C ---- */

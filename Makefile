@@ -50,11 +50,24 @@ $(BUILD)/%.o: %.m
 	@mkdir -p $(dir $@)
 	$(CC) -O2 -g -fobjc-arc -Wall -Isrc -c $< -o $@
 
-$(BUILD)/pop2: $(BUILD)/m68kops.c $(OBJ)
-	$(CC) $(OBJ) $(LDFLAGS) -o $@
+# The game sources are compiled from a rewritten copy (tools/mkcheck.py): every call to a
+# ported function goes through its nat_ wrapper, which pushes the arguments on the emulated
+# stack and enters the function through its glue, exactly as an original 68k caller would.
+PORTED_SRC := $(filter-out src/game/gen/%,$(wildcard src/game/*.c))
+NAT_GAME   := $(patsubst src/game/%.c,$(BUILD)/nat/%.o,$(PORTED_SRC))
+NAT_OBJ    := $(filter-out $(patsubst %.c,$(BUILD)/%.o,$(PORTED_SRC)),$(OBJ)) $(NAT_GAME) $(BUILD)/src/game/gen/chk.o
+$(BUILD)/nat/.stamp: tools/mkcheck.py $(PORTED_SRC) src/game/gen/glue.c
+	@mkdir -p $(BUILD)/nat
+	python3 tools/mkcheck.py $(BUILD)/nat nat_
+	@touch $@
+$(BUILD)/nat/%.c: $(BUILD)/nat/.stamp ;
+$(BUILD)/nat/%.o: $(BUILD)/nat/%.c $(wildcard src/*/*.h src/*.h) src/game/gen/proto.h src/game/gen/proto_chk.h
+	$(CC) $(CFLAGS) -DPORT_CHECK_BUILD -Isrc/game -c $< -o $@
+
+$(BUILD)/pop2: $(BUILD)/m68kops.c $(NAT_OBJ)
+	$(CC) $(NAT_OBJ) $(LDFLAGS) -o $@
 
 # ---- check build: calls between ported functions go through their 68k entry (see tools/mkcheck.py)
-PORTED_SRC := $(filter-out src/game/gen/%,$(wildcard src/game/*.c))
 CHK_GAME   := $(patsubst src/game/%.c,$(BUILD)/chk/%.o,$(PORTED_SRC))
 CHK_OBJ    := $(filter-out $(patsubst %.c,$(BUILD)/%.o,$(PORTED_SRC)),$(OBJ)) $(CHK_GAME) $(BUILD)/src/game/gen/chk.o
 src/game/gen/chk.c src/game/gen/proto_chk.h: src/game/gen/glue.c
@@ -93,3 +106,6 @@ clean:
 	rm -rf $(BUILD)
 
 .PHONY: all clean check app
+
+# keep the rewritten sources (for reading compiler errors and debugging)
+.SECONDARY: $(patsubst src/game/%.c,$(BUILD)/nat/%.c,$(PORTED_SRC)) $(patsubst src/game/%.c,$(BUILD)/chk/%.c,$(PORTED_SRC))

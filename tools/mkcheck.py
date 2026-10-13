@@ -15,7 +15,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 GAME = os.path.join(ROOT, 'src', 'game')
 
-def main(out):
+def main(out, prefix='chk_'):
     names = [n for n in open(os.path.join(GAME, 'gen', 'chk_names.txt')).read().split() if n]
     if not names:
         return
@@ -45,9 +45,9 @@ def main(out):
             # leave the definition's own name alone: `uint32_t Name(` at column 0
             d = re.match(r'^(uint32_t\s+)(\w+)(\s*\()', line)
             if d:
-                res.append(d.group(0) + call.sub(r'chk_\1\2', line[d.end():]))
+                res.append(d.group(0) + call.sub(prefix + r'\1\2', line[d.end():]))
             else:
-                res.append(call.sub(r'chk_\1\2', line))
+                res.append(call.sub(prefix + r'\1\2', line))
         text = '\n'.join(res)
         text = '#include "gen/proto_chk.h"\n#line 1 "src/game/%s"\n' % fn + text
         dst = os.path.join(out, fn)
@@ -55,4 +55,4 @@ def main(out):
             open(dst, 'w').write(text)
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else 'chk_')
