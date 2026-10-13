@@ -1,0 +1,10 @@
+{
+  "fileCheckException": {"conv": "manual"},
+
+  "fileDerivePathFromIDs__FPcslUs": {"ret": 2, "retslot": false},
+  "fileGetVolName__FsPc": {"ret": 2, "retslot": false},
+  "getMaster__FUs": {"ret": 4, "retslot": false},
+  "findEmptySlot__FRs": {"ret": 4, "retslot": false},
+
+  "__ct__8fileSpecDC8fileSpecPCc": {"params": [[4, 4], [8, 2], [10, 4], [270, 4]]}
+}
