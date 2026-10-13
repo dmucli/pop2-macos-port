@@ -116,6 +116,29 @@ static maddr alloc_block_(int h, uint32_t size, uint8_t flags) {
     return 0;
 }
 
+/* debug: describe the heap block containing address a (no side effects) */
+int rsrc_describe(maddr h, uint32_t *type, int16_t *id);
+void mm_describe(maddr a, char *out, size_t n) {
+    int h = heap_of(a);
+    out[0] = 0;
+    if (h < 0) return;
+    for (maddr b = heaps[h].start + 64; b < heaps[h].end; ) {
+        uint32_t sz = rd32(b + 4);
+        if (sz < HDR) break;
+        if (a >= b && a < b + sz) {
+            maddr hnd = rd32(b + 8);
+            uint8_t fl = rd8(b + 12);
+            uint32_t ty; int16_t id;
+            if (!(fl & MF_USED)) snprintf(out, n, "free block %06x", b + HDR);
+            else if (hnd && rsrc_describe(hnd, &ty, &id))
+                snprintf(out, n, "resource '%c%c%c%c' %d +%x", ty >> 24, ty >> 16 & 0xFF, ty >> 8 & 0xFF, ty & 0xFF, id, a - b - HDR);
+            else snprintf(out, n, "%s %06x (size %x) +%x", hnd ? "handle block" : "pointer block", b + HDR, rd32(b), a - b - HDR);
+            return;
+        }
+        b += sz;
+    }
+}
+
 static void free_block(maddr p) {
     maddr b = p - HDR;
     wr8(b + 12, 0); wr32(b + 8, 0);
