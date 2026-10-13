@@ -1,0 +1,21 @@
+{
+  "purgeThisMuch__FUl": {"ret": 4, "retslot": false},
+  "FUN_000659b6": {"conv": "pascal", "ret": 4, "retslot": false},
+
+  "memRegisterOwner": {"conv": "manual"},
+  "memReallocPtr": {"conv": "manual"},
+  "ReallocPtr": {"conv": "manual"},
+  "osGetNextEvent": {"conv": "manual"},
+  "osWaitNextEvent": {"conv": "manual"},
+  "FUN_000659e8": {"conv": "manual", "ret": 4},
+  "osResetSystemTimer": {"conv": "manual"},
+
+  "FUN_0006314a": {"ret": 2},
+  "FUN_00066788": {"ret": 2},
+
+  "dprintf_": {"params": [[4, 4]], "ret": 0},
+  "osPageLock": {"params": [[4, 4], [8, 4]]},
+  "osPageUnlock": {"params": [[4, 4], [8, 4]]},
+  "threadInit": {"params": [[4, 4]]},
+  "threadQuit": {"params": [[4, 4]]}
+}
