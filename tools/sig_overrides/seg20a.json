@@ -1,0 +1,12 @@
+{
+  "tc_SysEnvirons": {"conv": "manual"},
+  "tc_GetPtrSize": {"conv": "manual"},
+  "tc_GetHandleSize": {"conv": "manual"},
+  "tc_NGetTrapAddress": {"conv": "manual"},
+  "tc_GetVInfo": {"conv": "manual"},
+  "tc_GetFInfo": {"conv": "manual"},
+  "tc_DIBadMount": {"conv": "manual"},
+  "tc__Pack2_dispatch": {"conv": "manual"},
+
+  "seg20_05b9e0": {"conv": "pascal", "purge": 8, "retslot": false}
+}
