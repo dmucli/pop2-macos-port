@@ -73,7 +73,8 @@ static void wait_slice(void) { if (!runtime_deterministic) platform_wait_ms(2); 
 /* ------------------------------------------------------------ mixer -- */
 static void free_sample(Sample *s) { free(s->pcm); memset(s, 0, sizeof *s); }
 
-static uint32_t sound_starved;   /* output frames lost to double-buffer underruns */
+static uint32_t sound_starved;
+uint32_t frames_changed;   /* screen updates that changed something (stats) */   /* output frames lost to double-buffer underruns */
 static void audio_cb(void *ud, Uint8 *stream, int len) {
     (void)ud;
     float *out = (float *)stream;
@@ -293,8 +294,8 @@ void sound_service(void) {
         next = now_ms() + 2000;
         int used = 0, dbn = 0, play = 0;
         for (int i = 0; i < MAXCH; i++) if (ch[i].used) { used++; dbn += ch[i].dbq_n; play += ch[i].playing; }
-        extern uint32_t vbl_tick_count;
-        fprintf(stderr, "[audio] chans=%d playing=%d dbq=%d mixed=%u peak=%.3f starved=%u vbl=%u\n", used, play, dbn, sound_frames_mixed, sound_peak, sound_starved, vbl_tick_count);
+        extern uint32_t vbl_tick_count, tm_run_count, frames_changed;
+        fprintf(stderr, "[audio] chans=%d playing=%d dbq=%d mixed=%u peak=%.3f starved=%u vbl=%u tm=%u frames=%u\n", used, play, dbn, sound_frames_mixed, sound_peak, sound_starved, vbl_tick_count, tm_run_count, frames_changed);
         sound_peak = 0;
     }
     for (int i = 0; i < MAXCH; i++) {

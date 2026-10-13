@@ -15,6 +15,9 @@ static TmEntry tm[MAX_TM];
 
 static TmEntry *tm_find(maddr task) { for (int i = 0; i < MAX_TM; i++) if (tm[i].task == task) return &tm[i]; return NULL; }
 
+#include <stdlib.h>
+static int tmlog = -1;
+#define TMLOG(...) do { if (tmlog < 0) tmlog = getenv("POP2_TMLOG") != NULL; if (tmlog) fprintf(stderr, __VA_ARGS__); } while (0)
 void InsTime(maddr task, int extended) {
     TmEntry *e = tm_find(task);
     if (!e) for (int i = 0; i < MAX_TM; i++) if (!tm[i].task) { e = &tm[i]; break; }
@@ -24,6 +27,7 @@ void InsTime(maddr task, int extended) {
     if (extended) wr32(task + 14, 0);
 }
 void RmvTime(maddr task) {
+    TMLOG("[tm] %llu RmvTime %06x\n", (unsigned long long)runtime_us(), task);
     TmEntry *e = tm_find(task);
     if (!e) return;
     if (e->active) {
@@ -35,6 +39,7 @@ void RmvTime(maddr task) {
     e->task = 0; e->active = 0;
 }
 void PrimeTime(maddr task, int32_t count) {
+    TMLOG("[tm] %llu PrimeTime %06x %d\n", (unsigned long long)runtime_us(), task, count);
     TmEntry *e = tm_find(task);
     if (!e) { InsTime(task, 0); e = tm_find(task); if (!e) return; }
     uint64_t delay = count >= 0 ? (uint64_t)count * 1000u : (uint64_t)(-(int64_t)count);
@@ -57,6 +62,8 @@ void time_run_tasks(uint64_t now) {
         wr32(task + 10, 0);
         maddr fn = rd32(task + 6);
         if (fn) {
+            { extern uint32_t tm_run_count; tm_run_count++; }
+            TMLOG("[tm] %llu run %06x fn %06x\n", (unsigned long long)now, task, fn);
             cpu_call_irq(fn, 0, fn, task, 0, NULL);
         }
     }
@@ -83,7 +90,7 @@ int16_t VRemove(maddr task) {
     for (int i = 0; i < MAX_VBL; i++) if (vbl[i] == task) { vbl[i] = 0; return 0; }
     return -1;   /* qErr */
 }
-uint32_t vbl_tick_count;
+uint32_t vbl_tick_count, tm_run_count;
 void vbl_tick(void) {
     vbl_tick_count++;
     for (int i = 0; i < MAX_VBL; i++) {

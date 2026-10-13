@@ -29,6 +29,11 @@ void runtime_trap_boundary(void);
 static int traps_since_peek = 1;
 uint64_t runtime_trap_count;
 void runtime_idle(void);
+/* Interrupt-level work (Time Manager and VBL tasks, sound callbacks) waits while the code
+ * has masked interrupts (SR interrupt mask raised, e.g. the Mohawk timer library's critical
+ * sections), as on a real Mac. */
+int cpu_irq_depth(void);
+static int irq_masked(void) { return (cpu_get(R_SR) & 0x0700) != 0 || cpu_irq_depth() > 0; }   /* masked, or already at interrupt level */
 void runtime_trap_hook(void) {
     runtime_trap_count++;
     if (!runtime_deterministic) {
@@ -38,7 +43,7 @@ void runtime_trap_hook(void) {
         static uint64_t last; static int busy;
         uint64_t now = host_us();
         static int off = -1; if (off < 0) off = getenv("POP2_NO_TRAP_IDLE") != NULL;   /* (A/B test switch) */
-        if (!off && !busy && now - last >= 1000) { busy = 1; last = now; runtime_idle(); busy = 0; }
+        if (!off && !busy && now - last >= 1000 && !irq_masked()) { busy = 1; last = now; runtime_idle(); busy = 0; }
         return;
     }
     vclock_us += 8;
@@ -176,7 +181,7 @@ static void test_pokes(void) {
 /* Work that must happen at deterministic points: timers, input script, snapshots, audio. */
 void runtime_trap_boundary(void) {
     static int busy;
-    if (busy) return;
+    if (busy || irq_masked()) return;
     busy = 1;
     static uint32_t last_tick;
     uint32_t t = runtime_ticks();

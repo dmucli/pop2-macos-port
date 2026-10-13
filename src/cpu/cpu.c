@@ -256,7 +256,8 @@ uint32_t cpu_call_regs(maddr pc, const uint32_t *regs16, uint32_t *a0) {
  * whether the interrupted code is original 68k or ported C, which keeps the
  * differential checker exact and deterministic runs reproducible. */
 static int irq_depth;
-int cpu_direct_native;        /* set when calls may bypass the 68k core (not while checking) */
+int cpu_direct_native;
+int cpu_irq_depth(void) { return irq_depth; }        /* set when calls may bypass the 68k core (not while checking) */
 NativeFn cpu_native_at(maddr pc);
 uint32_t cpu_call_irq(maddr pc, uint32_t d0, maddr a0, maddr a1, int nargs, const uint32_t *args) {
     uint32_t regs[15] = {0};

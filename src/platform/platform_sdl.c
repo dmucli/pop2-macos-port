@@ -27,7 +27,10 @@ int platform_init(int scale) {
     win = SDL_CreateWindow("Prince of Persia 2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                            qd_screen_w * scale, qd_screen_h * scale, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!win) { fprintf(stderr, "SDL window: %s\n", SDL_GetError()); return -1; }
-    ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    /* never wait for the display: the game runs on this thread and presents from inside
+     * its own loops (a blocking present costs up to a frame each time) */
+    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "0");
+    ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     if (!ren) ren = SDL_CreateRenderer(win, -1, 0);
     SDL_RenderSetLogicalSize(ren, qd_screen_w, qd_screen_h);
     tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, qd_screen_w, qd_screen_h);
@@ -64,8 +67,11 @@ void platform_present_if_due(void) {
     if (headless) return;
     uint32_t now = SDL_GetTicks();
     if (now - last_present_ms < 16) return;
-    /* the game may write pixels directly (GetPixBaseAddr), so refresh at 60 Hz regardless */
+    /* present when QuickDraw changed the screen or the colour table; the game may also write
+     * pixels directly (GetPixBaseAddr), so refresh at least every 100 ms regardless */
+    if (qd_screen_dirty == last_dirty && qd_clut_version == last_clut && now - last_present_ms < 100) return;
     last_present_ms = now;
+    { extern uint32_t frames_changed; if (qd_screen_dirty != last_dirty) frames_changed++; }   /* stats */
     last_dirty = qd_screen_dirty;
     platform_present();
 }
