@@ -47,7 +47,33 @@ static void brk_check(unsigned pc) {
     for (int i = 0; i < 16; i++) fprintf(stderr, " %04x", rd16(p1 + 2 * i));
     fprintf(stderr, "\n");
 }
+/* POP2_PROFILE=1: where the 68k core still spends its instructions (sampled 1/64),
+ * printed at exit by cpu_print_profile(). */
+static int prof_on = -1; static uint64_t prof_n;
+#define PROF_N 512
+static struct { int seg; uint32_t off4k; uint64_t n; } prof[PROF_N]; static int prof_used;
+static void prof_sample(unsigned pc) {
+    extern int loader_locate(maddr a, int *seg, uint32_t *off);
+    int sg = -1; uint32_t of = pc;
+    if (!loader_locate(pc, &sg, &of)) { sg = -1; of = pc; }
+    uint32_t key = sg >= 0 ? (of & ~0xFu) : (of & ~0xFFu);
+    for (int i = 0; i < prof_used; i++) if (prof[i].seg == sg && prof[i].off4k == key) { prof[i].n++; return; }
+    if (prof_used < PROF_N) { prof[prof_used].seg = sg; prof[prof_used].off4k = key; prof[prof_used].n = 1; prof_used++; }
+}
+void cpu_print_profile(void) {
+    if (prof_on <= 0) return;
+    for (int i = 0; i < prof_used; i++) for (int j = i + 1; j < prof_used; j++)
+        if (prof[j].n > prof[i].n) { __typeof__(prof[0]) t = prof[i]; prof[i] = prof[j]; prof[j] = t; }
+    fprintf(stderr, "--- 68k profile (samples x64 = instructions) ---\n");
+    for (int i = 0; i < prof_used && i < 30; i++)
+        if (prof[i].seg >= 0) fprintf(stderr, "  seg%-3d +%05x..  %llu\n", prof[i].seg, prof[i].off4k, (unsigned long long)prof[i].n * 64);
+        else fprintf(stderr, "  addr %06x..   %llu\n", prof[i].off4k, (unsigned long long)prof[i].n * 64);
+}
 void cpu_instr_hook(unsigned int pc) {
+    if (prof_on) {
+        if (prof_on < 0) prof_on = getenv("POP2_PROFILE") != NULL;
+        if (prof_on && (++prof_n & 63) == 0) prof_sample(pc);
+    }
     if (brk_seg >= 0) brk_check(pc);
     if (pc - last_pc > 10) { br_from[br_pos & (PCH - 1)] = last_pc; br_to[br_pos & (PCH - 1)] = pc; br_pos++; }
     last_pc = pc;

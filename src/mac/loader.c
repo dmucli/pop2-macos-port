@@ -69,6 +69,7 @@ void ExitToShell(void) {
     fm_close_all();
     vfs_flush_all();
     { extern uint64_t cpu_instr_count; fprintf(stderr, "exited after %llu instructions\n", (unsigned long long)cpu_instr_count); }
+    { extern void cpu_print_profile(void); cpu_print_profile(); }
     { extern void platform_shutdown(void); platform_shutdown(); }
     exit(0);
 }
