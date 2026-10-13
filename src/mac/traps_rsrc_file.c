@@ -146,7 +146,38 @@ static void T_HighLevelFSDispatch(uint16_t w) {
     ret16((uint16_t)err);
 }
 
+
+/* ResourceDispatch (A822): partial resource access, selector in D0. Works on the
+ * resource's handle (loaded first); writes mark the resource changed. */
+void ChangedResource(maddr h);
+static void T_ResourceDispatch(uint16_t w) {
+    (void)w;
+    uint32_t sel = cpu_get(R_D0) & 0xF;
+    if (sel == 1 || sel == 2) {          /* Read/WritePartialResource(h, offset, buffer, count) */
+        uint32_t count = pop32(); maddr buf = pop32(); uint32_t off = pop32(); maddr h = pop32();
+        if (!h || !rd32(h)) { LoadResource(h); }
+        if (!h || !rd32(h)) { wr16(LM_ResErr, (uint16_t)-192); return; }
+        uint32_t size = GetHandleSize(h);
+        if (off + count > size) {
+            if (sel == 1) { wr16(LM_ResErr, (uint16_t)-188); return; }   /* inputOutOfBounds */
+            SetHandleSize(h, off + count);
+        }
+        if (sel == 1) mcopy(buf, rd32(h) + off, count);
+        else { mcopy(rd32(h) + off, buf, count); ChangedResource(h); }
+        wr16(LM_ResErr, 0);
+    } else if (sel == 3) {               /* SetResourceSize(h, newSize) */
+        uint32_t size = pop32(); maddr h = pop32();
+        if (!h) { wr16(LM_ResErr, (uint16_t)-192); return; }
+        if (!rd32(h)) LoadResource(h);
+        if (rd32(h)) SetHandleSize(h, size);
+        ChangedResource(h);
+        wr16(LM_ResErr, 0);
+    } else {
+        fprintf(stderr, "[rsrc] ResourceDispatch selector %u unsupported\n", sel);
+    }
+}
 void traps_rsrc_init(void) {
+    trap_register(0xA822, T_ResourceDispatch);
     trap_register(0xA9A0, T_GetResource);
     trap_register(0xA81F, T_Get1Resource);
     trap_register(0xA9A1, T_GetNamedResource);
