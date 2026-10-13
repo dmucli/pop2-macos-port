@@ -2,8 +2,12 @@
  "res": "MDRV",
  "id": 11,
  "slot": 0,
- "comment": "SoundMusicSys music driver: decrypted + LZSS-decompressed 'MDRV' 11 (GetDriverCodeResource). Offsets are from the start of the decompressed code (Ghidra program mdrv11.bin, base 0).",
+ "comment": "SoundMusicSys music driver: decrypted + LZSS-decompressed 'MDRV' 11 (GetDriverCodeResource). Offsets are from the start of the decompressed code (Ghidra program mdrv11.bin, base 0). Entry points: the C-convention entry drv(selector, arg) at 0, and the routines the driver hands to the Toolbox (Sound Manager doubleBack, VBL task through a stub, PAS16 card completion and interrupt).",
  "functions": [
-  {"name": "MDRV_Entry", "off": 0, "params": [[4, 4], [8, 4]], "ret": 4}
+  {"name": "MDRV_Entry", "off": 0, "params": [[4, 4], [8, 4]], "ret": 4},
+  {"name": "MDRV_DoubleBack", "off": 2058, "params": [[4, 4], [8, 4]], "ret": 0, "conv": "pascal"},
+  {"name": "MDRV_VBLTask", "off": 2340, "params": [], "ret": 0, "conv": "manual"},
+  {"name": "MDRV_CardCompletion", "off": 15480, "params": [[4, 4], [8, 4], [12, 4], [16, 4]], "ret": 0, "conv": "pascal"},
+  {"name": "MDRV_CardInterrupt", "off": 15544, "params": [], "ret": 0, "conv": "manual"}
  ]
 }
