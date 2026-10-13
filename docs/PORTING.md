@@ -179,6 +179,10 @@ frame pointer: locals whose address escapes live at their original offsets `a6 -
 functions `"conv": "manual"` and write `void glue_Name(void)`: read the args at
 `emu_sp()+0...` (the hook already popped the return address), call the C function, write
 the final values back into the slots, `emu_set_d0(r)`. C callers call the C function.
+(The check build reaches these functions through their 68k entry, i.e. through your glue.
+If you generate glue functions with a macro, give the macro a name ending in `GLUE` and
+start its invocations at column 0, e.g. `PGLUE(Name, ...)`, so the check build leaves the
+calls inside it direct.)
 
 **Return values.** The checker compares D0 (masked by the return size). Where the
 original leaves garbage in D0 (or in its high word), check every caller in Ghidra and set
