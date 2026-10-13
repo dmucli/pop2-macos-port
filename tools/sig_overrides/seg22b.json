@@ -1,0 +1,13 @@
+{
+  "periodicXTask": {"conv": "manual"},
+  "periodicTask": {"conv": "manual"},
+
+  "__ct__13TimerLinkItemFRC10TTimerInfo": {"ret": 4},
+  "__ct__13TimerLinkListFv": {"ret": 4},
+  "AddItem__13TimerLinkListFRC10TTimerInfo": {"ret": 4},
+  "InsertItem__13TimerLinkListFRC10TTimerInfo": {"ret": 4},
+  "SelectItem__13TimerLinkListFRC10TTimerInfo": {"ret": 4},
+  "SelectFirstItem__13TimerLinkListFv": {"ret": 4},
+  "SelectLastItem__13TimerLinkListFv": {"ret": 4},
+  "SelectNextItem__13TimerLinkListFv": {"ret": 4}
+}
