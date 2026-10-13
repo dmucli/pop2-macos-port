@@ -57,6 +57,8 @@ def load_index():
             f['retslot'] = o['retslot']
         if o and 'purge' in o:
             f['purge'] = o['purge']
+        if o and 'slot' in o:
+            f['slot'] = o['slot']               # result slot size for chk_ trampolines (hand-glued Pascal)
         if o and o.get('nocheck'):
             f['nocheck'] = True
         f['params'] = sorted([p for p in f['params'] if 'off' in p], key=lambda p: p['off'])
@@ -102,7 +104,7 @@ def trampoline(f, i, cname, callfn):
     pascal = 'pascal' in (f.get('conv'), f.get('orig_conv'))
     if pascal and f.get('purge') is not None: span = f['purge']
     span = (span + 1) & ~1
-    slot = result_slot(f)
+    slot = f['slot'] if 'slot' in f else result_slot(f)
     body = ['uint32_t %s(%s) {' % (cname, plist(f))]
     body.append('    maddr sp0 = emu_sp(), sp = sp0 - %d;' % (span + slot))
     for p in f['params']:
