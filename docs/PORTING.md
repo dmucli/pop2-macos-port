@@ -198,6 +198,12 @@ such a routine, set the register first as the original had it: `cpu_set(R_D0, sn
 before the call. Likewise, a ported routine whose D0 depends on its entry registers reads
 them with `cpu_get`.
 
+The same goes for callee-saved registers (D3–D7, A2–A4) that the original holds while it
+calls 68k code: deeper 68k callees save them on the stack, and some code later copies
+uninitialised stack bytes into the heap (the Mohawk audio start path does). If a mismatch
+shows such a byte, set the emulated registers where the original does (`cpu_set`) and
+restore them on return.
+
 **Divisions** that can be by zero in the original (a 68k exception): guard them with
 `if (d == 0) port_divide_by_zero(__func__);` — never let the host trap.
 

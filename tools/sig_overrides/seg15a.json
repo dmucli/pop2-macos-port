@@ -1,0 +1,22 @@
+{
+  "DissolveNIS": {"params": [[4, 2]], "ret": 2},
+  "FadeInBothCTBLs": {"params": [[4, 4]]},
+  "FadeBothCTBLs": {"params": [[4, 4]]},
+  "GetSetFadeCTAB": {"params": [[4, 2], [6, 2], [8, 4]], "ret": 0},
+  "FadeIndex": {"params": [[4, 2], [6, 4], [10, 4], [14, 4], [18, 4]]},
+  "BlendCtabs": {"params": [[4, 4], [8, 4], [12, 2]]},
+  "DrawDisolveData": {"params": [[4, 4], [8, 4], [12, 4]], "ret": 4},
+
+  "NISDialog": {"ret": 2},
+  "TreeCheck": {"ret": 0},
+  "TransPrincessRoom": {"ret": 2},
+  "TransFuncSetCTABframe1": {"ret": 2},
+  "TransFuncJaffarMagic": {"ret": 2},
+  "TransFunc1": {"ret": 2},
+  "FUN_00044bd6": {"ret": 2},
+  "WaitCurrentSound": {"ret": 2},
+  "DoDissolve": {"ret": 2},
+  "InitDissolve": {"ret": 0},
+  "SetNISCTAB": {"ret": 0},
+  "SetDisolveDelays": {"ret": 0}
+}

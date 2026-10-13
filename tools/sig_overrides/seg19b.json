@@ -1,0 +1,12 @@
+{
+  "tc__printf_num2dec": {"params": [[4, 4], [8, 4], [12, 4], [16, 4], [20, 4], [24, 2]]},
+
+  "tc_lmul_d0d1":  {"conv": "manual"},
+  "tc_ldiv_d0d1":  {"conv": "manual"},
+  "tc_uldiv_d0d1": {"conv": "manual"},
+  "tc_lmod_d0d1":  {"conv": "manual"},
+  "tc_ulmod_d0d1": {"conv": "manual"},
+
+  "tc__run_STI": {"ret": 0},
+  "tc__run_STD": {"ret": 0}
+}

@@ -1,0 +1,22 @@
+{
+  "HappyFunc": {"conv": "manual"},
+  "QueenAddNIS": {"params": [[4, 2], [6, 2], [8, 2], [10, 4]], "ret": 2},
+
+  "JaffarBurnBabyBurn": {"ret": 2},
+  "Opening1": {"ret": 2},
+  "TransFunc4": {"ret": 2},
+  "TransFunc5": {"ret": 2},
+  "TransFunc6": {"ret": 2},
+  "TransFunc7": {"ret": 2},
+  "TransFunc8": {"ret": 2},
+  "TransFunc10": {"ret": 2},
+  "TransFunc11": {"ret": 2},
+  "DrawDeadKid": {"ret": 0},
+
+  "DissolveNIS": {"params": [[4, 2]]},
+  "GetSetFadeCTAB": {"params": [[4, 2], [6, 2], [8, 4]]},
+  "FadeInBothCTBLs": {"params": [[4, 4]]},
+  "FadeBothCTBLs": {"params": [[4, 4]]},
+  "FadeIndex": {"params": [[4, 2], [6, 4], [10, 4], [14, 4], [18, 4]]},
+  "FadeOutAllColors": {"params": [[4, 4], [8, 4]]}
+}
