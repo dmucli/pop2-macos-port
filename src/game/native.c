@@ -70,7 +70,8 @@ static void report_diff(int fi, maddr sp_after, uint32_t d0_c, uint32_t d0_68k) 
         if (a >= THUNK_BASE && a < THUNK_BASE + 2 * THUNK_COUNT) continue;
         if (a < sp_after && a >= sp_after - 0x10000) continue;          /* dead stack below SP */
         if (M[a] != shared_mem[a] && a != entry_g && a != entry_g + 1 && !check_ignored(a)) {
-            fprintf(stderr, "[check] %s: mem %06x port=%02x original=%02x\n", fn_info[fi].name, a, M[a], shared_mem[a]);
+            { extern void mm_describe(maddr a, char *out, size_t n); char d[96]; mm_describe(a, d, sizeof d);
+              fprintf(stderr, "[check] %s: mem %06x port=%02x original=%02x  %s\n", fn_info[fi].name, a, M[a], shared_mem[a], d); }
             shown++;
         }
     }

@@ -269,6 +269,12 @@ void GetResInfo(maddr h, int16_t *id, uint32_t *type, char *name) {
     if (id) *id = r->id; if (type) *type = t->type; if (name) strcpy(name, r->hasname ? r->name : "");
     set_reserr(0);
 }
+/* debug: type/id of a resource handle, without touching ResErr */
+int rsrc_describe(maddr h, uint32_t *type, int16_t *id) {
+    RType *t; Ref *r;
+    if (!locate(h, NULL, &t, &r)) return 0;
+    *type = t->type; *id = r->id; return 1;
+}
 int16_t GetResAttrs(maddr h) { Ref *r; if (!locate(h, NULL, NULL, &r)) { set_reserr(-192); return 0; } set_reserr(0); return r->attrs; }
 void SetResAttrs(maddr h, int16_t a) { Ref *r; if (!locate(h, NULL, NULL, &r)) { set_reserr(-192); return; } r->attrs = (uint8_t)a; set_reserr(0); }
 int32_t GetResourceSizeOnDisk(maddr h) { Ref *r; if (!locate(h, NULL, NULL, &r)) { set_reserr(-192); return -1; } set_reserr(0); return (int32_t)r->len; }

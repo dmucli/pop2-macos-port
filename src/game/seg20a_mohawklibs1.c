@@ -1441,7 +1441,7 @@ fail:
 uint32_t devicePrepare__7midiObj(uint32_t self) {
     ENTRY_LINK(FN_devicePrepare__7midiObj, 0, 28);  /* movem D3-D7/A2-A3 */
     maddr mapp = self + 0x30;
-    int16_t r = S16(midiMapOpen(0, 0, 0, 0, 0, R16(self + 0x1a), (int16_t)(mapp >> 16), (int16_t)mapp));
+    int16_t r = S16(midiMapOpen(0, 0, 0, R16(self + 0x1a), mapp));   /* 3 longs 0, device, &map (seg20b prototype) */
     if (r != 0) {
         int16_t e = r == 4 ? AUDERR_NOTENABLED : r == 2 ? AUDERR_BADDEVICE : AUDERR_NODEVICE;
         return audio_err(e);
