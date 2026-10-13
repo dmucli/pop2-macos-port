@@ -1,0 +1,24 @@
+{
+  "tc__start": {"conv": "manual", "nocheck": true},
+  "tc__call_STI": {"conv": "manual"},
+  "tc__LoadSeg_reloc_patch": {"conv": "manual"},
+  "tc__init_globals": {"conv": "manual"},
+  "tc__relocate": {"conv": "manual"},
+  "tc__save_handle_state": {"conv": "manual"},
+  "tc__restore_handle_state": {"conv": "manual"},
+  "tc__ldivmod_regs": {"conv": "manual"},
+  "tc__uldivmod_regs": {"conv": "manual"},
+  "tc__load_STRS": {"conv": "manual"},
+  "tc__install_trap_patches": {"conv": "manual"},
+  "tc__remove_trap_patches": {"conv": "manual"},
+
+  "tc_calloc": {"conv": "manual"},
+  "tc_tmpnam": {"conv": "manual"},
+  "tc__A5_storage_addr": {"conv": "manual"},
+  "tc__save_A5": {"conv": "manual"},
+  "tc__get_saved_A5": {"conv": "manual"},
+  "tc__console_put_text": {"conv": "manual"},
+  "tc__console_driver_noop": {"conv": "manual"},
+  "tc__console_driver_control": {"conv": "manual"},
+  "tc__console_input_insert": {"params": [[4, 2], [6, 4]]}
+}
