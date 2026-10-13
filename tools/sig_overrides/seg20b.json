@@ -1,0 +1,5 @@
+{
+  "midiMapOpen": {"params": [[4, 4], [8, 4], [12, 4], [16, 2], [18, 4]]},
+  "midiMapQuit": {"ret": 0},
+  "mmaudioQuit": {"ret": 0}
+}
