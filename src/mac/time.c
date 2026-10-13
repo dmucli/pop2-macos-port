@@ -83,7 +83,9 @@ int16_t VRemove(maddr task) {
     for (int i = 0; i < MAX_VBL; i++) if (vbl[i] == task) { vbl[i] = 0; return 0; }
     return -1;   /* qErr */
 }
+uint32_t vbl_tick_count;
 void vbl_tick(void) {
+    vbl_tick_count++;
     for (int i = 0; i < MAX_VBL; i++) {
         maddr task = vbl[i];
         if (!task) continue;

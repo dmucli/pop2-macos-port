@@ -42,6 +42,7 @@ typedef struct {
     Sample cur;                /* currently playing buffer */
     Sample installed;          /* sound installed by soundCmd (for freqCmd) */
     double pos, step;
+    double db_carry;           /* fractional source position carried into the next double buffer */
     int playing, looping, done_flag;
     double rate_mult;
     int amp;                   /* 0..255 */
@@ -72,6 +73,7 @@ static void wait_slice(void) { if (!runtime_deterministic) platform_wait_ms(2); 
 /* ------------------------------------------------------------ mixer -- */
 static void free_sample(Sample *s) { free(s->pcm); memset(s, 0, sizeof *s); }
 
+static uint32_t sound_starved;   /* output frames lost to double-buffer underruns */
 static void audio_cb(void *ud, Uint8 *stream, int len) {
     (void)ud;
     float *out = (float *)stream;
@@ -89,14 +91,15 @@ static void audio_cb(void *ud, Uint8 *stream, int len) {
                     memmove(&k->dbq[0], &k->dbq[1], sizeof(Sample) * (size_t)(k->dbq_n - 1));
                     k->dbq_n--;
                     memset(&k->dbq[k->dbq_n], 0, sizeof(Sample));
-                    k->pos = 0; k->step = k->cur.rate * k->rate_mult / OUT_RATE; k->playing = 1; k->looping = 0;
-                } else break;
+                    k->pos = k->db_carry; k->db_carry = 0;   /* continue the resampling phase across buffers */
+                    k->step = k->cur.rate * k->rate_mult / OUT_RATE; k->playing = 1; k->looping = 0;
+                } else { if (k->dbh) sound_starved += (uint32_t)(frames - f); break; }   /* underrun */
             }
             Sample *s = &k->cur;
             uint32_t i = (uint32_t)k->pos;
             if (i >= s->frames) {
                 if (k->looping && s->loop_end > s->loop_start + 1) { k->pos = s->loop_start + (k->pos - s->loop_end); i = (uint32_t)k->pos; if (i >= s->frames) { k->playing = 0; k->done_flag = 1; continue; } }
-                else { k->playing = 0; k->done_flag = 1; f--; continue; }
+                else { if (k->dbh) k->db_carry = k->pos - s->frames; k->playing = 0; k->done_flag = 1; f--; continue; }
             }
             if (k->looping && s->loop_end > s->loop_start + 1 && k->pos >= s->loop_end) { k->pos -= (s->loop_end - s->loop_start); i = (uint32_t)k->pos; }
             float l, r;
@@ -290,7 +293,8 @@ void sound_service(void) {
         next = now_ms() + 2000;
         int used = 0, dbn = 0, play = 0;
         for (int i = 0; i < MAXCH; i++) if (ch[i].used) { used++; dbn += ch[i].dbq_n; play += ch[i].playing; }
-        fprintf(stderr, "[audio] chans=%d playing=%d dbq=%d mixed=%u peak=%.3f\n", used, play, dbn, sound_frames_mixed, sound_peak);
+        extern uint32_t vbl_tick_count;
+        fprintf(stderr, "[audio] chans=%d playing=%d dbq=%d mixed=%u peak=%.3f starved=%u vbl=%u\n", used, play, dbn, sound_frames_mixed, sound_peak, sound_starved, vbl_tick_count);
         sound_peak = 0;
     }
     for (int i = 0; i < MAXCH; i++) {

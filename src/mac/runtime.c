@@ -28,9 +28,19 @@ uint64_t runtime_us(void) { return runtime_deterministic ? vclock_us : host_us()
 void runtime_trap_boundary(void);
 static int traps_since_peek = 1;
 uint64_t runtime_trap_count;
+void runtime_idle(void);
 void runtime_trap_hook(void) {
     runtime_trap_count++;
-    if (!runtime_deterministic) return;
+    if (!runtime_deterministic) {
+        /* Real time: the game runs as native code and rarely returns to the CPU loop, so the
+         * periodic work (timers, VBL tasks, sound buffers, input, screen) runs from here,
+         * at most once per millisecond of host time. */
+        static uint64_t last; static int busy;
+        uint64_t now = host_us();
+        static int off = -1; if (off < 0) off = getenv("POP2_NO_TRAP_IDLE") != NULL;   /* (A/B test switch) */
+        if (!off && !busy && now - last >= 1000) { busy = 1; last = now; runtime_idle(); busy = 0; }
+        return;
+    }
     vclock_us += 8;
     traps_since_idle++;
     traps_since_peek = 1;
@@ -41,7 +51,7 @@ uint32_t runtime_ticks(void) { return (uint32_t)(runtime_us() * 60 / 1000000u); 
  * one with no trap in between is a polling loop; let virtual time pass. This keeps
  * time independent of how many instructions run (ported C vs original 68k code). */
 void runtime_ticks_peek(void) {
-    if (!runtime_deterministic) return;
+    if (!runtime_deterministic) { wr32(LM_Ticks, runtime_ticks()); return; }   /* real time: always current */
     if (traps_since_peek) { traps_since_peek = 0; return; }
     vclock_us += 50;
     wr32(LM_Ticks, runtime_ticks());

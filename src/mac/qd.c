@@ -268,7 +268,10 @@ int16_t NewGWorld(maddr out, int16_t depth, QRect bounds, maddr ctab, maddr gdev
     if (depth == 0) depth = 8;
     if (depth != 8 && depth != 1) fprintf(stderr, "[qd] NewGWorld depth %d not supported, using 8\n", depth);
     int w = bounds.right - bounds.left, h = bounds.bottom - bounds.top;
-    int rowbytes = (w + 3) & ~3;
+    /* Like 32-bit QuickDraw, rows get one extra long of padding: a 512-pixel 8-bit GWorld
+     * has rowBytes 516. Saved data depends on it (the dissolve tables in Prince2.opt hold
+     * source offsets computed with rowBytes 516). */
+    int rowbytes = ((w + 3) & ~3) + 4;
     maddr pixels = NewPtrClear((uint32_t)rowbytes * h + 4);
     if (!pixels) return -108;
     maddr port = NewPtrClear(GW_SIZE);

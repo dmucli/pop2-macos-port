@@ -171,6 +171,11 @@ static Ref *find_ref(ResFile *f, uint32_t type, int16_t id) {
 void (*rsrc_missing_hook)(uint32_t type, int16_t id);
 
 static maddr get_resource(uint32_t type, int16_t id, int one) {
+    {   /* debug: POP2_HIDE_RES=TYPE hides every resource of that type */
+        static uint32_t hide = 1;
+        if (hide == 1) { const char *e = getenv("POP2_HIDE_RES"); hide = (e && strlen(e) == 4) ? (uint32_t)e[0] << 24 | (uint32_t)e[1] << 16 | (uint32_t)e[2] << 8 | (uint8_t)e[3] : 0; }
+        if (hide && type == hide) { set_reserr(-192); return 0; }
+    }
     for (ResFile *f = search_start(); f; f = one ? NULL : f->next) {
         Ref *r = find_ref(f, type, id);
         if (r) { set_reserr(0); return load_ref(f, r); }
