@@ -94,4 +94,28 @@ their disassembly — whoever ports them must agree):
 
 ## Verification
 
-(see below)
+`JOBS=4 SECS=2400 tools/check.sh` after merging master (seg07/seg10/seg11b): no mismatch,
+no timeout, 563 functions verified. The standard scenarios reach this unit only inside
+other checked calls:
+the intro plays `Opening1` (interrupted by the first key) under `PlayNIS`/`CheckPlayNIS`
+of seg02a, which are checked as a whole (ok). No saved game plays a transition NIS.
+Extra runs (not committed; scripts in the session scratchpad):
+
+* Long intro (`VMS=600000`) with `POP2_NATIVE_ONLY=<this unit>` so the callers are 68k:
+  `Opening1`, `Opening2`, `NISTitle` checked on complete plays, ok. Same run with the
+  top-level scripts kept on the 68k core and `CALLS=500`: every call of `TitleFunc`
+  (402) and `FUN_0004b11a` ok.
+* A temporary test hook (in seg02b's per-frame `FUN_00017554`, removed) called
+  `PlayNIS(n)` during play of a saved game: NIS 2 (temple, "Level 9"), 3 (tower,
+  "Level 13"), 6 (throne room, "Level 14"), 11 (happy ending, "Level 15").
+  * Top-level scripts checked on complete plays: `NISTemple`, `NISTower`,
+    `NISThroneRoom` (after the register fix above), `JaffarBurnBabyBurn`, ok.
+  * With the scripts on the 68k core and `CALLS=500`, every call of `TransFunc4..11`
+    and `HappyFunc` (285 calls) ok; `FlipKid`, `HappyDialog`, `DrawDeadKid`,
+    `FUN_0004ace6`, `FUN_0004adc4`, `QueenAddNIS`, `FUN_0004ae9c` checked
+    individually with their parents on the 68k core, ok.
+
+So all 25 functions were checked individually by the differential checker without
+mismatch. Not covered: the early-return paths (a missing NIS shape in `Opening2`) and the
+interrupted-by-key branches of the long scripts beyond the first wait (reviewed against
+the disassembly).
