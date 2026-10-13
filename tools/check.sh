@@ -36,7 +36,7 @@ done
 list=("$@"); [ ${#list} -eq 0 ] && list=(${(k)SCN})
 mkdir -p $OUT
 rm -f $OUT/*.log                     # results only from this run
-JOBS=${JOBS:-$(( $(sysctl -n hw.ncpu) / 2 ))}   # scenarios run in parallel, at most JOBS at a time
+JOBS=${JOBS:-$(( $(sysctl -n hw.ncpu) / 4 ))}   # scenarios run in parallel, at most JOBS at a time (several engineers share the machine)
 pids=()
 for sc in $list; do
   while (( $(jobs -r | wc -l) >= JOBS )); do sleep 0.2; done
@@ -54,3 +54,4 @@ cat $OUT/*.log | grep -a "^\[check\] MISMATCH" | sed 's/ (call.*//' | sort | uni
 echo "-- ok: $(cat $OUT/*.log | grep -a '^\[check\] .* ok$' | sort -u | wc -l | tr -d ' ') functions verified"
 cat $OUT/*.log | grep -a "^\[native\]" | awk '{a[$2]+=$3} END {for (k in a) if (a[k]==0) print "   never called: " k}' | sort | head -60
 grep -a -l "exception vector" $OUT/*.log | sed 's/^/   CRASH in /'
+for f in $OUT/*.log; do grep -aq "exit at virtual\|exception vector" $f || echo "   TIMEOUT (host limit SECS=$SECS reached, results incomplete): $f"; done

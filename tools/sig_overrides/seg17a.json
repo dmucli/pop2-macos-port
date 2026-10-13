@@ -1,0 +1,20 @@
+{
+  "FadeOutAllColors": {"params": [[4, 4], [8, 4]]},
+
+  "Wait": {"ret": 2},
+  "PollUser0": {"ret": 2},
+
+  "TakeBackReleaseColors": {"ret": 0},
+  "GiveSystemColors": {"ret": 0},
+  "GameWindow": {"ret": 0},
+  "CheckOSErr": {"ret": 0},
+
+  "NotSameRects": {"ret": 1},
+  "CompareTicks": {"ret": 1},
+  "RectValid": {"ret": 1},
+  "Sys6OrLater": {"ret": 1},
+
+  "ErrorHandler": {"nocheck": true},
+  "Terminate": {"nocheck": true},
+  "ShowErrorAndExit": {"nocheck": true}
+}

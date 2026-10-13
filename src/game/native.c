@@ -50,6 +50,8 @@ static const struct { int32_t a5off; uint32_t stride, byte, count; } check_ignor
     { -0x11e4, 16, 15, 100 },
 };
 static int check_ignored(maddr a) {
+    /* the interrupt-level stack: dead scratch space, zeroed before each use */
+    if (a >= IRQ_STACK_TOP - IRQ_STACK_SIZE && a < IRQ_STACK_TOP) return 1;
     for (size_t i = 0; i < sizeof check_ignore / sizeof check_ignore[0]; i++) {
         maddr t = rd32(g_a5 + check_ignore[i].a5off) & ADDR_MASK;
         if (!t || a < t || a >= t + check_ignore[i].stride * check_ignore[i].count) continue;
@@ -195,6 +197,13 @@ void native_init(void) {
 }
 
 void native_set_a5(maddr a5) { g_a5 = a5; }
+
+void port_divide_by_zero(const char *where) {
+    extern void runtime_quit(void);
+    fprintf(stderr, "*** division by zero in %s (the original Mac game stops with a system error here)\n", where);
+    runtime_quit();
+    _exit(1);
+}
 
 maddr fn_address(int i) {
     const FnInfo *f = &fn_info[i];

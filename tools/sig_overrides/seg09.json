@@ -1,0 +1,22 @@
+{
+  "ShadowInRange": {"conv": "manual"},
+
+  "FUN_00038756": {"ret": 2},
+  "JaffarGoToPos1": {"ret": 2},
+  "JaffarGoToPos2": {"ret": 2},
+  "JaffarGoToPos3": {"ret": 2},
+  "seg9_03a224": {"ret": 2},
+  "SinkDsrtStone": {"ret": 2},
+  "TriggerStone": {"ret": 2},
+
+  "seg9_037c12": {"ret": 0},
+  "seg9_038204": {"ret": 0},
+  "FUN_00039934": {"ret": 0},
+  "AnimFinlCrystal": {"ret": 0},
+  "AnimFinlGargoyle": {"ret": 0},
+  "seg9_03a418": {"ret": 0},
+  "FUN_00055660": {"ret": 0},
+  "DsrtCheckExit": {"ret": 0},
+  "FUN_0005591c": {"ret": 0},
+  "RemoveLastStonePeel": {"ret": 0}
+}
