@@ -50,6 +50,10 @@ static const struct { int32_t a5off; uint32_t stride, byte, count; } check_ignor
     { -0x11e4, 16, 15, 100 },
 };
 static int check_ignored(maddr a) {
+    /* contents of a heap block that is free in both images (same header in both) */
+    { extern maddr mm_free_block_header(maddr a);
+      maddr b = mm_free_block_header(a);
+      if (b && !memcmp(M + b, shared_mem + b, 16)) return 1; }
     /* the interrupt-level stack: dead scratch space, zeroed before each use */
     if (a >= IRQ_STACK_TOP - IRQ_STACK_SIZE && a < IRQ_STACK_TOP) return 1;
     for (size_t i = 0; i < sizeof check_ignore / sizeof check_ignore[0]; i++) {

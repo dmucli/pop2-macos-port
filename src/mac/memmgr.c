@@ -116,6 +116,20 @@ static maddr alloc_block_(int h, uint32_t size, uint8_t flags) {
     return 0;
 }
 
+/* Checker: address of the header of the free heap block containing a (0 if a is not in
+ * a free block). Dead memory: its contents never influence the program until reused. */
+maddr mm_free_block_header(maddr a) {
+    int h = heap_of(a);
+    if (h < 0) return 0;
+    for (maddr b = heaps[h].start + 64; b < heaps[h].end; ) {
+        uint32_t sz = rd32(b + 4);
+        if (sz < HDR) return 0;
+        if (a >= b && a < b + sz) return (a >= b + HDR && !(rd8(b + 12) & MF_USED)) ? b : 0;
+        b += sz;
+    }
+    return 0;
+}
+
 /* debug: describe the heap block containing address a (no side effects) */
 int rsrc_describe(maddr h, uint32_t *type, int16_t *id);
 void mm_describe(maddr a, char *out, size_t n) {
