@@ -356,6 +356,21 @@ static void trap_thunk_entry(void) {
     run_native_trap(thunk_trap_word[i]);
 }
 
+/* A call through a code pointer that lands on a trap thunk (a trap address obtained with
+ * GetTrapAddress): run the trap directly, as the thunk would once its return address is
+ * popped. Returns 1 if pc was such a thunk. */
+int cpu_run_trap_thunk_at(maddr pc) {
+    uint16_t w = rd16(pc);
+    if ((w & 0xF000) != 0xF000) return 0;
+    unsigned i = w & 0xFFF;
+    if (thunk_fn[i] != trap_thunk_entry || pc != THUNK_BASE + 2 * i) return 0;
+    maddr saved_ret = trap_ret; uint16_t saved_word = cur_trap_word;
+    trap_ret = 0;
+    run_native_trap(thunk_trap_word[i]);
+    trap_ret = saved_ret; cur_trap_word = saved_word;
+    return 1;
+}
+
 maddr trap_get_address(uint16_t w) {
     maddr p = (w & 0x0800) ? tb_patch[w & 0x3FF] : os_patch[w & 0xFF];
     return p ? p : trap_thunk(w);
@@ -456,6 +471,7 @@ void cpu_stop(void) { cpu_running = 0; m68k_end_timeslice(); }
 void cpu_init(void) {
     m68k_init();
     m68k_set_cpu_type(M68K_CPU_TYPE_68020);
+#ifndef POP2_MINICORE
     {   /* Route every F-line opcode ($Fxxx) to the line-F exception (our thunks and native
          * hooks). Musashi decodes some coprocessor patterns (cpGEN/cpScc/cpBcc/... with
          * cpID != 0) as silent no-ops on a 68020, which would skip hook words like $FE86.
@@ -470,6 +486,7 @@ void cpu_init(void) {
         }
         for (unsigned o = 0xF000; o <= 0xFFFF; o++) m68ki_instruction_jump_table[o] = best;
     }
+#endif
     m68k_linea_hook = linea_hook;
     m68k_linef_hook = linef_hook;
     m68k_pulse_reset();

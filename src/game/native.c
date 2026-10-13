@@ -221,6 +221,13 @@ void native_init(void) {
     }
     loader_segment_loaded = on_segment_loaded;
     { extern int cpu_direct_native; cpu_direct_native = getenv("POP2_CHECK") == NULL; }
+#ifdef POP2_MINICORE
+    if (getenv("POP2_CHECK") || (mode && !strcmp(mode, "none")) || excl || only) {
+        fprintf(stderr, "this build has no 68k emulator (CORE=mini): POP2_CHECK, POP2_NATIVE and the "
+                        "NATIVE_ONLY/EXCLUDE options need the emulator build\n");
+        exit(1);
+    }
+#endif
     if (getenv("POP2_CHECK")) {
         check_budget = atoi(getenv("POP2_CHECK"));
         if (check_budget <= 0) check_budget = 20;
@@ -260,6 +267,8 @@ NativeFn cpu_native_at(maddr pc);
  * behind a jump-table entry), enter the glue directly, as the hook would, without the 68k
  * core; the check build keeps the 68k path so that the checker sees the call. */
 uint32_t call68_addr(maddr addr) {
+    extern int cpu_run_trap_thunk_at(maddr pc);
+    if (!check_budget && cpu_run_trap_thunk_at(addr)) return cpu_get(R_D0);
     NativeFn fn = check_budget ? NULL : cpu_native_at(addr);
     if (fn) {
         maddr saved = port_glue_sp;

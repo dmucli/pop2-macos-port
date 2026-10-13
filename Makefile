@@ -13,12 +13,24 @@ GAME_SRC := $(wildcard src/game/*.c src/game/*/*.c)
 SRC := $(wildcard src/*.c src/mac/*.c src/cpu/*.c src/fs/*.c src/platform/*.c) $(filter-out src/game/gen/%,$(GAME_SRC)) src/game/gen/glue.c
 OBJC_SRC := $(wildcard src/platform/*.m)
 TRAPS_JSON ?= $(CURDIR)/../work/traps.json
-OBJ := $(patsubst %.c,$(BUILD)/%.o,$(SRC)) $(patsubst %.m,$(BUILD)/%.o,$(OBJC_SRC)) $(BUILD)/m68kcpu.o $(BUILD)/m68kdasm.o $(BUILD)/m68kops.o $(BUILD)/softfloat.o
+# CORE=mini: release build without the 68k emulator (src/cpu/minicore.c runs only the
+# dispatch instructions left once every function is ported); default: the Musashi emulator.
+ifeq ($(CORE),mini)
+CFLAGS += -DPOP2_MINICORE -I$(MUSASHI)
+# (src/cpu/minicore.c is part of src/cpu/*.c)
+CORE_OBJ :=
+CORE_DEP :=
+else
+SRC := $(filter-out src/cpu/minicore.c,$(SRC))
+CORE_OBJ := $(BUILD)/m68kcpu.o $(BUILD)/m68kdasm.o $(BUILD)/m68kops.o $(BUILD)/softfloat.o
+CORE_DEP := $(BUILD)/m68kops.c
+endif
+OBJ := $(patsubst %.c,$(BUILD)/%.o,$(SRC)) $(patsubst %.m,$(BUILD)/%.o,$(OBJC_SRC)) $(CORE_OBJ)
 
 all: $(BUILD)/pop2
 
 # Regenerate glue whenever ported sources or the function index change.
-src/game/gen/glue.c src/game/gen/proto.h: tools/gen_port.py tools/fn_index.json $(wildcard tools/sig_overrides/*.json) $(filter-out src/game/gen/%,$(GAME_SRC))
+src/game/gen/glue.c src/game/gen/proto.h: tools/gen_port.py tools/fn_index.json $(wildcard tools/sig_overrides/*.json) $(wildcard tools/coderes/*.json) $(filter-out src/game/gen/%,$(GAME_SRC))
 	python3 tools/gen_port.py $(TRAPS_JSON)
 
 $(BUILD)/m68kmake: $(MUSASHI)/m68kmake.c
@@ -64,7 +76,7 @@ $(BUILD)/nat/%.c: $(BUILD)/nat/.stamp ;
 $(BUILD)/nat/%.o: $(BUILD)/nat/%.c $(wildcard src/*/*.h src/*.h) src/game/gen/proto.h src/game/gen/proto_chk.h
 	$(CC) $(CFLAGS) -DPORT_CHECK_BUILD -Isrc/game -c $< -o $@
 
-$(BUILD)/pop2: $(BUILD)/m68kops.c $(NAT_OBJ)
+$(BUILD)/pop2: $(CORE_DEP) $(NAT_OBJ)
 	$(CC) $(NAT_OBJ) $(LDFLAGS) -o $@
 
 # ---- check build: calls between ported functions go through their 68k entry (see tools/mkcheck.py)
@@ -78,12 +90,12 @@ $(BUILD)/chk/.stamp: tools/mkcheck.py $(PORTED_SRC) src/game/gen/glue.c
 $(BUILD)/chk/%.c: $(BUILD)/chk/.stamp ;
 $(BUILD)/chk/%.o: $(BUILD)/chk/%.c $(wildcard src/*/*.h src/*.h) src/game/gen/proto.h src/game/gen/proto_chk.h
 	$(CC) $(CFLAGS) -DPORT_CHECK_BUILD -Isrc/game -c $< -o $@
-$(BUILD)/pop2check: $(BUILD)/m68kops.c $(CHK_OBJ)
+$(BUILD)/pop2check: $(CORE_DEP) $(CHK_OBJ)
 	$(CC) $(CHK_OBJ) $(LDFLAGS) -o $@
 check: $(BUILD)/pop2check
 
 # ---- macOS app bundle (no game data inside: it asks for the user's own disk image)
-#   make app BUILD=build/release      (release build, without the debug instruction hook)
+#   make app BUILD=build/release CORE=mini   (release build: no 68k emulator, no debug hook)
 APP := $(BUILD)/PoP2 Port.app
 SDL3_LIBDIR ?= $(shell (command -v pkg-config >/dev/null && pkg-config --variable=libdir sdl3) 2>/dev/null || echo /opt/homebrew/opt/sdl3/lib)
 app: $(BUILD)/pop2 packaging/Info.plist
