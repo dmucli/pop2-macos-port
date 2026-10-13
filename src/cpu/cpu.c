@@ -165,6 +165,18 @@ maddr cpu_thunk(NativeFn fn, const char *name) {
     return THUNK_BASE + 2 * i;
 }
 
+/* The native function a 68k call to pc would end up in (pc holds a hook word, possibly
+ * behind a loaded jump-table entry "jmp abs.l"), or NULL. */
+NativeFn cpu_native_at(maddr pc) {
+    for (int k = 0; k < 3; k++) {
+        uint16_t w = rd16(pc);
+        if (w == 0x4EF9) { pc = rd32(pc + 2); continue; }
+        if ((w & 0xF000) == 0xF000 && thunk_is_hook[w & 0xFFF] && thunk_fn[w & 0xFFF]) return thunk_fn[w & 0xFFF];
+        return NULL;
+    }
+    return NULL;
+}
+
 /* A native replacement for an original function: its entry word is patched with
  * the returned F-line opcode. */
 static unsigned hook_next = THUNK_COUNT - 1;   /* hooks grow down so trap thunk addresses never shift */

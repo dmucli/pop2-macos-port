@@ -254,7 +254,21 @@ maddr fn_address(int i) {
 }
 
 uint32_t cpu_call_keep_scratch(maddr pc);
-uint32_t call68_addr(maddr addr) { return cpu_call_keep_scratch(addr); }
+NativeFn cpu_native_at(maddr pc);
+/* A call through a code pointer. When it lands on a ported function (its hook word, maybe
+ * behind a jump-table entry), enter the glue directly, as the hook would, without the 68k
+ * core; the check build keeps the 68k path so that the checker sees the call. */
+uint32_t call68_addr(maddr addr) {
+    NativeFn fn = check_budget ? NULL : cpu_native_at(addr);
+    if (fn) {
+        maddr saved = port_glue_sp;
+        port_glue_sp = emu_sp();
+        fn();
+        port_glue_sp = saved;
+        return cpu_get(R_D0);
+    }
+    return cpu_call_keep_scratch(addr);
+}
 
 #include <stdarg.h>
 uint32_t call_ptr(maddr fn, const char *fmt, ...) {
