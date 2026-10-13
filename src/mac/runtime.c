@@ -196,8 +196,15 @@ void runtime_idle(void) {
         /* Loops that neither call traps nor poll Ticks still progress, but only after a
          * long trap-free stretch, so ordinary code never depends on instruction counts. */
         static int quiet_slices;
-        if (traps_since_idle) quiet_slices = 0;
-        else if (++quiet_slices >= 32) { vclock_us += 1000; runtime_trap_boundary(); }
+        /* POP2_QUIET_CLOCK=1: let long trap-free stretches of 68k code advance the clock
+         * (instruction-count dependent, so off by default: native code runs none) */
+        static int quiet = -1; if (quiet < 0) quiet = getenv("POP2_QUIET_CLOCK") != NULL;
+        if (traps_since_idle || !quiet) quiet_slices = 0;
+        else if (++quiet_slices >= 32) {
+            static int dbg = -1; if (dbg < 0) dbg = getenv("POP2_DBG_QUIET") != NULL;
+            if (dbg) fprintf(stderr, "[clock] quiet fallback at %llu us\n", (unsigned long long)vclock_us);
+            vclock_us += 1000; runtime_trap_boundary();
+        }
         traps_since_idle = 0;
         platform_poll();
         platform_present_if_due();

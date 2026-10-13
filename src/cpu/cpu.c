@@ -170,7 +170,10 @@ maddr cpu_thunk(NativeFn fn, const char *name) {
 NativeFn cpu_native_at(maddr pc) {
     for (int k = 0; k < 3; k++) {
         uint16_t w = rd16(pc);
-        if (w == 0x4EF9) { pc = rd32(pc + 2); continue; }
+        if (w == 0x4EF9) { pc = rd32(pc + 2); continue; }            /* jump-table entry: jmp abs.l */
+        if (w == 0x6104 && rd32(pc + 6) == 0x225F2251 && rd16(pc + 10) == 0x4ED1) {
+            pc = rd32(pc + 2); continue;                             /* stub: bsr *+6; dc.l target; movea.l (sp)+,a1; movea.l (a1),a1; jmp (a1) */
+        }
         if ((w & 0xF000) == 0xF000 && thunk_is_hook[w & 0xFFF] && thunk_fn[w & 0xFFF]) return thunk_fn[w & 0xFFF];
         return NULL;
     }
@@ -253,6 +256,8 @@ uint32_t cpu_call_regs(maddr pc, const uint32_t *regs16, uint32_t *a0) {
  * whether the interrupted code is original 68k or ported C, which keeps the
  * differential checker exact and deterministic runs reproducible. */
 static int irq_depth;
+int cpu_direct_native;        /* set when calls may bypass the 68k core (not while checking) */
+NativeFn cpu_native_at(maddr pc);
 uint32_t cpu_call_irq(maddr pc, uint32_t d0, maddr a0, maddr a1, int nargs, const uint32_t *args) {
     uint32_t regs[15] = {0};
     regs[R_D0] = d0; regs[R_A0] = a0; regs[R_A1] = a1;
@@ -263,7 +268,20 @@ uint32_t cpu_call_irq(maddr pc, uint32_t d0, maddr a0, maddr a1, int nargs, cons
         cpu_set(R_SP, IRQ_STACK_TOP);
     }
     for (int i = 0; i < nargs; i++) push32(args[i]);
-    uint32_t r = cpu_call_regs(pc, regs, NULL);
+    uint32_t r;
+    NativeFn fn = cpu_direct_native ? cpu_native_at(pc) : NULL;
+    if (fn) {               /* a ported routine: enter its glue directly, registers as the call sets them */
+        static unsigned char ctx[8][4096];
+        unsigned char *c = ctx[irq_depth & 7];
+        m68k_get_context(c);
+        for (int k = 0; k < 15; k++) cpu_set(k, regs[k]);
+        maddr saved = port_glue_sp;
+        port_glue_sp = cpu_get(R_SP);
+        fn();
+        r = cpu_get(R_D0);
+        port_glue_sp = saved;
+        m68k_set_context(c);
+    } else r = cpu_call_regs(pc, regs, NULL);
     irq_depth--;
     cpu_set(R_SP, sp0);
     return r;

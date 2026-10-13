@@ -596,7 +596,8 @@ uint32_t DisposeSOffWorld(uint32_t w) {
 uint32_t BuildOffGWorld(uint32_t w, uint32_t rect) {
     ENTRY_LINK(FN_BuildOffGWorld, 4, 12);
     W32(a6 - 4, 0);
-    CheckCurrentFreeMemory(0);
+    /* "clr.b -(SP)": a word whose high byte is 0 and whose low byte is what the stack held */
+    CheckCurrentFreeMemory((int16_t)R8(emu_sp() - 1));
     uint32_t dev = _GetMainDevice();
     int16_t err = (int16_t)_NewGWorld(a6 - 4, 8, rect, 0, dev, 2);
     if (err == 0) {

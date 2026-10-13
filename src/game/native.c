@@ -220,6 +220,7 @@ void native_init(void) {
         n++;
     }
     loader_segment_loaded = on_segment_loaded;
+    { extern int cpu_direct_native; cpu_direct_native = getenv("POP2_CHECK") == NULL; }
     if (getenv("POP2_CHECK")) {
         check_budget = atoi(getenv("POP2_CHECK"));
         if (check_budget <= 0) check_budget = 20;
