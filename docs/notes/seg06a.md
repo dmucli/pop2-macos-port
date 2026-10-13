@@ -134,8 +134,8 @@ right after the call.
 
 * **Final standard run.** `JOBS=4 SECS=2400 tools/check.sh` ran all 22 scenarios on
   current master, with no mismatch and no timeout.
-  * 37 of the 56 functions are reached by the scripted gameplay.
-  * 24 of them are checked on their own entry. The rest run inside checked callers.
+  * 44 of the 56 functions are reached by the scripted gameplay.
+  * 30 of them are checked on their own entry. The rest run inside checked callers.
 * **Grouped runs.** `POP2_NATIVE_ONLY` groups were chosen by colouring the unit's call
   graph, so that no function shares a group with its callers. They were run with
   `CALLS=100` and showed no mismatch.
