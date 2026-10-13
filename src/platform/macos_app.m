@@ -160,3 +160,19 @@ void macos_pref_set_int(const char *key, int v) {
     @autoreleasepool { [[NSUserDefaults standardUserDefaults] setInteger:v forKey:[NSString stringWithUTF8String:key]]; }
 }
 void macos_beep(void) { NSBeep(); }
+
+/* A game alert (ALRT/DITL) shown as a native alert: text, then buttons in DITL order
+ * (the first one is the default). Returns the index of the button chosen. */
+int macos_game_alert(int kind, const char *text, const char *const *buttons, int n) {
+    @autoreleasepool {
+        NSAlert *a = [[NSAlert alloc] init];
+        a.alertStyle = kind == 0 ? NSAlertStyleCritical : NSAlertStyleWarning;
+        a.messageText = @"Prince of Persia 2";
+        a.informativeText = macroman(text);
+        for (int i = 0; i < n; i++) [a addButtonWithTitle:macroman(buttons[i])];
+        if (n == 0) [a addButtonWithTitle:@"OK"];
+        NSModalResponse r = [a runModal];
+        int i = (int)(r - NSAlertFirstButtonReturn);
+        return i >= 0 && i < (n ? n : 1) ? i : 0;
+    }
+}

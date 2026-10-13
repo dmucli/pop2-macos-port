@@ -224,7 +224,8 @@ void mods_frame(void) {
         static uint32_t sum_at_save; static maddr kid_at_save;
         uint32_t sum = 0; for (unsigned i = 0; i < 0x40000; i++) sum = sum * 31 + M[0x100000 + i];
         if (*getenv("POP2_MODS_SELFTEST") == '3') {   /* level selector: visit every level */
-            static int lv_frames, target = 1;
+            static int lv_frames, target = -1;
+            if (target < 0) target = getenv("POP2_MODS_LEVEL") ? atoi(getenv("POP2_MODS_LEVEL")) : 1;
             if (++lv_frames == 30) {
                 fprintf(stderr, "[mods] in level %d, going to %d\n", (int16_t)rd16(A5(-0x4fd2)), target);
                 mods_goto_level(target++); lv_frames = -100000;

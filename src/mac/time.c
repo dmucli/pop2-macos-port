@@ -63,7 +63,7 @@ void time_run_tasks(uint64_t now) {
         maddr fn = rd32(task + 6);
         if (fn) {
             { extern uint32_t tm_run_count; tm_run_count++; }
-            TMLOG("[tm] %llu run %06x fn %06x\n", (unsigned long long)now, task, fn);
+            TMLOG("[tm] %llu run %06x fn %06x late %llu\n", (unsigned long long)now, task, fn, (unsigned long long)(now - e->due));
             cpu_call_irq(fn, 0, fn, task, 0, NULL);
         }
     }

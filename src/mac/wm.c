@@ -958,7 +958,27 @@ static void run_alert(int16_t id, int icon) {
     (void)icon;
     char msg[256] = ""; if (param_text[0] && rd32(param_text[0])) pstr_to_c(rd32(param_text[0]), msg, sizeof msg);
     fprintf(stderr, "[alert %d] %s\n", id, msg);
-    int item = modal_loop(d, 0);
+    int item;
+    extern int platform_is_headless(void); extern int runtime_deterministic;
+    if (!platform_is_headless() && !runtime_deterministic) {
+        /* in the window: a native alert (the game's own text, its buttons) */
+        char text[600] = "", btn[8][64]; const char *bp[8]; int bitem[8], nb = 0;
+        for (int i = 1; i <= ditl_count(d); i++) {
+            int type; maddr it = ditl_item(d, i, &type, NULL);
+            int t = type & 0x7F, l = rd8(it + 13);
+            uint8_t raw[256], ex[256]; int en;
+            for (int j = 0; j < l; j++) raw[j] = rd8(it + 14 + j);
+            expand_params(raw, l, ex, &en); ex[en] = 0;
+            for (int j = 0; j < en; j++) if (ex[j] == '\r') ex[j] = '\n';
+            if (t == 8 && strlen(text) + en + 2 < sizeof text) { if (*text) strcat(text, "\n"); strcat(text, (char *)ex); }
+            else if ((t & 0x7C) == 4 && nb < 8) { snprintf(btn[nb], sizeof btn[nb], "%s", (char *)ex); bp[nb] = btn[nb]; bitem[nb++] = i; }
+        }
+        int macos_game_alert(int kind, const char *text, const char *const *buttons, int n);
+        extern void event_release_all(void);
+        int k = macos_game_alert(icon, text, bp, nb);
+        event_release_all();
+        item = nb ? bitem[k] : 1;
+    } else item = modal_loop(d, 0);
     close_window(d);
     ret16((uint16_t)item);
 }

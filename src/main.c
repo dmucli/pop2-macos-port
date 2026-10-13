@@ -29,6 +29,11 @@ static void on_term(int sig) {
 
 int main(int argc, char **argv) {
     const char *hfv = NULL, *app = ":Prince2:Prince of Persia 2";
+    /* the app bundle: messages go to ~/Library/Logs/PoP2 Port.log (last run only) */
+    if (macos_in_app_bundle() && getenv("HOME")) {
+        char log[1024]; snprintf(log, sizeof log, "%s/Library/Logs/PoP2 Port.log", getenv("HOME"));
+        if (freopen(log, "w", stderr)) setvbuf(stderr, NULL, _IOLBF, 0);
+    }
     int headless = 0, scale = 2;
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--app") && i + 1 < argc) app = argv[++i];
