@@ -165,6 +165,13 @@ Getting more coverage:
 * A temporary test hook calling a function with chosen arguments is fine while you work;
   do not commit it.
 
+**Whole-game equivalence.** `tools/equiv.sh [scenario] [virtual ms]` runs the same
+deterministic scenario fully native and fully on the original 68k code and compares the
+sequences of Toolbox traps. On 2026-10-13 (every function ported, including the MDRV driver)
+all saved levels gave the same 7.5M traps over 60 s of play, except "Level 4", where
+`BuildOffGWorld` passes `CheckCurrentFreeMemory` a stale stack byte (`clr.b -(SP)`) whose
+value differs between the two runs (the original game's behaviour depends on that garbage).
+
 ## 10. Rules learned from the first units (read before starting)
 
 **Stack fidelity.** 68k code reached from your function (callees, Toolbox callbacks, the
