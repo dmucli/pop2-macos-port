@@ -60,3 +60,16 @@ test harness (and to run the MDRV synth until it is ported too).
    Goal: original code boots to the title screen and plays.
 3. Port segment by segment from the Ghidra decompile, with differential tests.
 4. Port the MDRV synth; package `.app`; docs.
+
+## Status (2026-10-13)
+
+- Every function of the game is ported (CODE 1–23: 2,161 of 2,165; the 4 left are THINK C
+  helpers that change their own return path and are not needed), plus the MDRV music driver.
+- Verified call by call (`tools/check.sh`) and as a whole (`tools/equiv.sh`: same Toolbox
+  call sequence as the original on every saved level, 60 s each, except one byte of stack
+  garbage the original passes in `BuildOffGWorld` on Level 4).
+- The release build (`make app BUILD=build/release CORE=mini`) contains no 68k emulator:
+  `src/cpu/minicore.c` executes only the dispatch instructions that remain (hook words,
+  traps, jump-table entries, two small stubs).
+- macOS app: native menu bar, native Open/Save dialogs, disk-image chooser, Dock icon from
+  the user's copy; no publisher data in the bundle.
