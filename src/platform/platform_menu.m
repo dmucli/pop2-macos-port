@@ -63,6 +63,7 @@ static int game_items(maddr h, GameItem *out, int max) {
 - (void)fullscreen:(id)sender { (void)sender; platform_toggle_fullscreen(); }
 /* Extras */
 - (void)toggleMod:(NSMenuItem *)item { mods_set((int)item.tag, !mods_get((int)item.tag)); platform_menu_sync(); }
+- (void)gotoLevel:(NSMenuItem *)item { mods_goto_level((int)item.tag); }
 - (void)nextLevel:(id)sender { (void)sender; mods_next_level(); platform_menu_sync(); }
 - (void)quickSave:(id)sender { (void)sender; if (mods_playing()) mods_quick_save(0); else NSBeep(); }
 - (void)quickLoad:(id)sender { (void)sender; if (mods_playing() && mods_slot_used(0)) mods_quick_load(0); else NSBeep(); }
@@ -160,7 +161,7 @@ void platform_menu_update(void) {
         NSMenu *ex = [[NSMenu alloc] initWithTitle:@"Extras"];
         ex.autoenablesItems = NO;
         static NSString *const mod_titles[MOD_COUNT] = { @"Cheat Mode", @"Infinite Time", @"Infinite Health",
-                                                          @"Rewind (hold Delete)", @"Remember Copy Protection Answer" };
+                                                          @"Rewind (hold Delete)", @"Skip Copy Protection" };
         const int order[] = { MOD_INFINITE_HEALTH, MOD_INFINITE_TIME, MOD_CHEAT_MODE, -1 };
         for (int i = 0; order[i] >= 0; i++) {
             NSMenuItem *it = add(ex, mod_titles[order[i]], @selector(toggleMod:), nil, 1);
@@ -168,6 +169,14 @@ void platform_menu_update(void) {
         }
         NSMenuItem *nl = add(ex, @"Skip to Next Level", @selector(nextLevel:), @"n", 1);
         nl.keyEquivalentModifierMask = NSEventModifierFlagOption | NSEventModifierFlagCommand;
+        NSMenu *lv = [[NSMenu alloc] initWithTitle:@"Go to Level"];
+        lv.autoenablesItems = NO;
+        for (int l = 1; l <= 14; l++) {
+            NSMenuItem *it = add(lv, [NSString stringWithFormat:@"Level %d", l], @selector(gotoLevel:), nil, 1);
+            it.tag = l;
+        }
+        NSMenuItem *lvi = [ex addItemWithTitle:@"Go to Level" action:NULL keyEquivalent:@""];
+        lvi.submenu = lv;
         [ex addItem:[NSMenuItem separatorItem]];
         NSMenuItem *qs = add(ex, @"Quick Save (F5)", @selector(quickSave:), @"s", 1);
         qs.keyEquivalentModifierMask = NSEventModifierFlagOption | NSEventModifierFlagCommand;
@@ -176,8 +185,8 @@ void platform_menu_update(void) {
         NSMenuItem *rw = add(ex, mod_titles[MOD_REWIND], @selector(toggleMod:), nil, 1);
         rw.tag = MOD_REWIND; rw.state = mods_get(MOD_REWIND) ? NSControlStateValueOn : NSControlStateValueOff;
         [ex addItem:[NSMenuItem separatorItem]];
-        NSMenuItem *cp = add(ex, mod_titles[MOD_REMEMBER_COPYPROT], @selector(toggleMod:), nil, 1);
-        cp.tag = MOD_REMEMBER_COPYPROT; cp.state = mods_get(MOD_REMEMBER_COPYPROT) ? NSControlStateValueOn : NSControlStateValueOff;
+        NSMenuItem *cp = add(ex, mod_titles[MOD_SKIP_COPYPROT], @selector(toggleMod:), nil, 1);
+        cp.tag = MOD_SKIP_COPYPROT; cp.state = mods_get(MOD_SKIP_COPYPROT) ? NSControlStateValueOn : NSControlStateValueOff;
         add(ex, @"Controls\u2026", @selector(controls:), nil, 1);
         [bar addItemWithTitle:@"Extras" action:NULL keyEquivalent:@""].submenu = ex;
 

@@ -1,5 +1,5 @@
-/* Extras (the "Extras" menu): cheats, quick save slots and rewind, remembered copy
- * protection answer.
+/* Extras (the "Extras" menu): cheats, level selection, quick save slots and rewind,
+ * skipping the copy protection question.
  *
  * Everything here sits outside the ported game code and is inactive in deterministic
  * runs (tools/check.sh, tools/equiv.sh), so the verification of the port is unaffected.
@@ -36,8 +36,8 @@ extern uint32_t qd_screen_dirty, qd_clut_version;
 /* ---- settings ---- */
 static const char *pref_name[MOD_COUNT] = {
     "Extras.CheatMode", "Extras.InfiniteTime", "Extras.InfiniteHealth", "Extras.Rewind",
-    "Extras.RememberCopyProtection" };
-static const int pref_default[MOD_COUNT] = { 0, 0, 0, 1, 1 };
+    "Extras.SkipCopyProtection" };
+static const int pref_default[MOD_COUNT] = { 0, 0, 0, 1, 1 };   /* rewind and skip copy protection on */
 static int mod[MOD_COUNT], prefs_loaded;
 static int cheat_forced;                 /* we set the game's cheat flag */
 static int saved_minutes = -1;
@@ -75,24 +75,26 @@ void mods_next_level(void) {
     event_menu_command_key('l');
 }
 
-/* ---- remembered copy protection answer ----
- * CopyProtectionDialog sets the flag before asking and quits the game after three wrong
- * answers, so a game frame running with the flag set means the answer was right. Once
- * that has happened, the flag is set as soon as the game has initialised its globals,
- * and the dialog is not shown again. */
-static int copy_remembered = -1;
+/* Go to a level: the game's own mechanism (as Command-L), applied at the start of a frame. */
+#define G_LEVEL          A5(-0x4fd2)    /* word: the level being played */
+#define G_NEXT_LEVEL     A5(-0x4f92)    /* word: the level to go to (== level while playing it) */
+uint32_t nat_ResetSoundItem(int16_t p4);
+static int want_level;
+void mods_goto_level(int level) {
+    if (!mods_playing() || level < 1 || level > 14) { macos_beep(); return; }
+    want_level = level;
+}
+int mods_current_level(void) { return mods_playing() ? (int16_t)rd16(G_LEVEL) : 0; }
+
+/* ---- copy protection ----
+ * CopyProtectionDialog asks only while its "passed" flag is clear (and sets it itself);
+ * with the option on, the flag is set as soon as the game has initialised its globals. */
 void mods_tick(void) {
     load_prefs();
-    if (!mod[MOD_REMEMBER_COPYPROT] || !active()) return;
+    if (!mod[MOD_SKIP_COPYPROT] || !active()) return;
     extern uint64_t runtime_us(void);
     if (runtime_us() < 2000000) return;   /* after the THINK C start-up has set up the globals */
-    if (copy_remembered < 0) copy_remembered = macos_pref_int("Extras.CopyProtectionPassed", 0);
-    if (copy_remembered && rd16(G_COPY_OK) != 1) wr16(G_COPY_OK, 1);
-}
-static void copy_frame(void) {
-    if (!mod[MOD_REMEMBER_COPYPROT] || rd16(G_COPY_OK) != 1) return;
-    if (copy_remembered < 0) copy_remembered = macos_pref_int("Extras.CopyProtectionPassed", 0);
-    if (!copy_remembered) macos_pref_set_int("Extras.CopyProtectionPassed", copy_remembered = 1);
+    if (rd16(G_COPY_OK) != 1) wr16(G_COPY_OK, 1);
 }
 
 /* ---- save states ---- */
@@ -202,7 +204,6 @@ void mods_frame(void) {
     { static int once; if (!once++ && getenv("POP2_MODS_SELFTEST")) fprintf(stderr, "[mods] first frame, active %d\n", active()); }
     { extern uint64_t runtime_us(void); last_frame_us = runtime_us(); }
     if (!active()) return;
-    copy_frame();
     if (mod[MOD_CHEAT_MODE] && rd16(G_CHEAT_MODE) == 0) { wr16(G_CHEAT_MODE, 1); cheat_forced = 1; }
     if (mod[MOD_INFINITE_TIME]) {
         int m = (int16_t)rd16(G_MINUTES_LEFT);
@@ -222,6 +223,15 @@ void mods_frame(void) {
         frame_no++;
         static uint32_t sum_at_save; static maddr kid_at_save;
         uint32_t sum = 0; for (unsigned i = 0; i < 0x40000; i++) sum = sum * 31 + M[0x100000 + i];
+        if (*getenv("POP2_MODS_SELFTEST") == '3') {   /* level selector: visit every level */
+            static int lv_frames, target = 1;
+            if (++lv_frames == 30) {
+                fprintf(stderr, "[mods] in level %d, going to %d\n", (int16_t)rd16(A5(-0x4fd2)), target);
+                mods_goto_level(target++); lv_frames = -100000;
+            }
+            if (rd16(A5(-0x4fd2)) == target - 1 && lv_frames < 0) lv_frames = 0;
+            goto selftest_done;
+        }
         if (*getenv("POP2_MODS_SELFTEST") == '2') {   /* cheats */
             if (frame_no == 1) { mod[MOD_INFINITE_TIME] = mod[MOD_INFINITE_HEALTH] = 1; }
             if (frame_no % 40 == 0) fprintf(stderr, "[mods] frame %d level %d minutes %d frames %d life %d/%d\n", frame_no,
@@ -239,6 +249,14 @@ void mods_frame(void) {
         if (frame_no % 50 == 0) fprintf(stderr, "[mods] frame %d level %d ring %d\n", frame_no, (int16_t)rd16(A5(-0x4fd2)), ring_count);
     }
     selftest_done:
+    if (want_level) {
+        int l = want_level; want_level = 0;
+        if (rd16(G_NEXT_LEVEL) == rd16(G_LEVEL)) {   /* not already leaving the level */
+            wr16(G_NEXT_LEVEL, (uint16_t)l);
+            nat_ResetSoundItem(0);                    /* as Command-L: stop the level's sounds */
+        }
+        return;
+    }
     if (want_load >= 0) {
         int n = want_load; want_load = -1;
         if (!snap_restore(&slot[n])) macos_beep();

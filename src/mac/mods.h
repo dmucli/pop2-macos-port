@@ -1,10 +1,12 @@
 /* Extras (mods.c): cheats, save states and rewind; usable from Objective-C too. */
 #ifndef POP2_MODS_H
 #define POP2_MODS_H
-enum { MOD_CHEAT_MODE, MOD_INFINITE_TIME, MOD_INFINITE_HEALTH, MOD_REWIND, MOD_REMEMBER_COPYPROT, MOD_COUNT };
+enum { MOD_CHEAT_MODE, MOD_INFINITE_TIME, MOD_INFINITE_HEALTH, MOD_REWIND, MOD_SKIP_COPYPROT, MOD_COUNT };
 int  mods_get(int m);
 void mods_set(int m, int v);
 void mods_next_level(void);
+void mods_goto_level(int level);   /* 1-14 */
+int  mods_current_level(void);    /* 0 when not playing */
 void mods_tick(void);
 void mods_frame(void);
 void mods_level_start(void);

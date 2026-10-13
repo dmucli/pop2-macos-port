@@ -23,9 +23,10 @@ Additions of this port, outside the original game (they are off in the verificat
 | Extras > Infinite Time | the clock stops |
 | Extras > Cheat Mode | the game's own debug mode (as when 1 2 3 are held at launch): `-`/`+` change the time, Command-L next level on any level; the letter keys no longer move |
 | Extras > Skip to Next Level (Option-Command-N) | turns on Cheat Mode and uses the game's Command-L |
+| Extras > Go to Level | jump to any level 1-14 while playing |
 | F5 / F9 (Option-Command-S / -L) | quick save / quick load, within the level being played |
 | hold Delete | rewind (about 15 seconds; Extras > Rewind turns it off) |
-| Extras > Remember Copy Protection Answer | after one right answer, the question is not asked again (on this Mac) |
+| Extras > Skip Copy Protection | on by default: the manual question is never asked (as ScummVM does for games of that era) |
 | Extras > Controls... | choose the keys; game controllers work too (d-pad/stick, A action, B second button, Start pause, left shoulder rewind, right shoulder / Y quick save / load) |
 | View | Pixels, Sharp Pixels (whole multiples), Smooth, CRT Scanlines |
 
@@ -63,6 +64,11 @@ Regenerating the function index and the Toolbox wrappers needs the Ghidra projec
 - **Whole game:** `tools/equiv.sh` runs a scenario fully native and fully on the original
   code with a deterministic clock and compares the sequences of Toolbox calls (millions
   of calls per scenario).
+
+## Licence
+
+MIT for the code written for this port (runtime, platform layer, tools). `src/game/` is a
+translation of the original program and is not licensed; see [LICENSE](LICENSE).
 
 ## Layout
 
