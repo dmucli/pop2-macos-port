@@ -298,9 +298,18 @@ uint32_t call_ptr(maddr fn, const char *fmt, ...) {
 /* Normal build: a ported function called from C, with its arguments already pushed on the
  * emulated stack by the nat_ wrapper, entered through its glue exactly as a 68k caller would
  * enter it (minus the CPU): the function sees its real argument slots and stack depth. */
+static uint32_t call_native_fn_(int i);
 uint32_t call_native_fn(int i) {
     if (i == FN_FUN_00016654) mods_frame();             /* start of a game frame (Extras) */
-    else if (i == FN_FUN_0001652c) mods_level_start();  /* a level's frame loop */
+    else if (i == FN_FUN_0001652c) {                    /* a level's frame loop (Extras) */
+        mods_level_start();
+        uint32_t r = call_native_fn_(i);
+        mods_level_end();
+        return r;
+    }
+    return call_native_fn_(i);
+}
+static uint32_t call_native_fn_(int i) {
     /* like "jsr off(A5)": while the function's segment is not loaded, enter through the jump
      * table (the _LoadSeg trap, patched by THINK C, loads the CODE resource and advances the
      * clock); the call then reaches the native function through its hook */

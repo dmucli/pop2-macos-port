@@ -79,7 +79,7 @@ void mods_next_level(void) {
 #define G_LEVEL          A5(-0x4fd2)    /* word: the level being played */
 #define G_NEXT_LEVEL     A5(-0x4f92)    /* word: the level to go to (== level while playing it) */
 uint32_t nat_ResetSoundItem(int16_t p4);
-static int want_level;
+static int want_level, in_level;   /* in_level: a level's frame loop is running */
 void mods_goto_level(int level) {
     if (!mods_playing() || level < 1 || level > 14) { macos_beep(); return; }
     want_level = level;
@@ -189,20 +189,17 @@ void mods_quick_load(int n) { if (n >= 0 && n < 3) want_load = n; }
 int  mods_slot_used(int n) { return n >= 0 && n < 3 && slot[n].used && slot[n].level == level_id; }
 
 /* the level's frame loop starts: save states from another level are no longer valid */
-void mods_level_start(void) { level_id++; ring_clear(); saved_minutes = -1; }
+void mods_level_start(void) { in_level = 1; level_id++; ring_clear(); saved_minutes = -1; }
 
-/* a level is being played (its frame loop ran recently) */
-static uint64_t last_frame_us;
-int mods_playing(void) {
-    extern uint64_t runtime_us(void);
-    return active() && last_frame_us && runtime_us() - last_frame_us < 500000;
-}
+/* a level is being played: its frame loop is running (menus pause the game, so this is
+ * not a matter of time since the last frame) */
+int mods_playing(void) { return active() && in_level; }
+void mods_level_end(void) { in_level = 0; want_level = 0; }
 
 /* start of a game frame */
 void mods_frame(void) {
     load_prefs();
     { static int once; if (!once++ && getenv("POP2_MODS_SELFTEST")) fprintf(stderr, "[mods] first frame, active %d\n", active()); }
-    { extern uint64_t runtime_us(void); last_frame_us = runtime_us(); }
     if (!active()) return;
     if (mod[MOD_CHEAT_MODE] && rd16(G_CHEAT_MODE) == 0) { wr16(G_CHEAT_MODE, 1); cheat_forced = 1; }
     if (mod[MOD_INFINITE_TIME]) {

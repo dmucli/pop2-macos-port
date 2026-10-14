@@ -10,6 +10,7 @@ int  mods_current_level(void);    /* 0 when not playing */
 void mods_tick(void);
 void mods_frame(void);
 void mods_level_start(void);
+void mods_level_end(void);
 void mods_set_rewind_held(int held);
 void mods_quick_save(int n);
 void mods_quick_load(int n);
