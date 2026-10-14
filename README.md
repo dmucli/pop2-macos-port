@@ -13,6 +13,16 @@ it asks for that file and remembers it. Saved games and settings are written to
 
 This is an unofficial fan project, not affiliated with or endorsed by the rights holders.
 
+## Download
+
+Get `PoP2-Port-macOS.zip` from the [Releases](../../releases) page (Apple Silicon Macs,
+macOS 12 or later), unzip it and move `PoP2 Port.app` to Applications.
+
+The app is not signed with an Apple Developer ID, so the first time macOS blocks it:
+open it once, then in System Settings > Privacy & Security click **Open Anyway** (or run
+`xattr -dr com.apple.quarantine "/Applications/PoP2 Port.app"`). It then asks for your
+disk image of the original game.
+
 ## Extras
 
 Additions of this port, outside the original game (they are off in the verification runs):

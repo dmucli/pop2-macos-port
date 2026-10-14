@@ -102,6 +102,7 @@ app: $(BUILD)/pop2 packaging/Info.plist
 	rm -rf "$(APP)"
 	mkdir -p "$(APP)/Contents/MacOS" "$(APP)/Contents/Frameworks" "$(APP)/Contents/Resources"
 	cp $(BUILD)/pop2 "$(APP)/Contents/MacOS/pop2"
+	strip -S "$(APP)/Contents/MacOS/pop2"   # debug map: object paths of the build machine
 	cp packaging/Info.plist "$(APP)/Contents/Info.plist"
 	SDL2=$$(otool -L $(BUILD)/pop2 | awk '/libSDL2/{print $$1}'); \
 	  cp "$$SDL2" "$(APP)/Contents/Frameworks/"; chmod u+w "$(APP)/Contents/Frameworks/"*; \
