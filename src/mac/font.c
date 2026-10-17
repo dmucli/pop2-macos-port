@@ -1,12 +1,18 @@
-/* Font Manager / text drawing: Mac bitmap fonts (NFNT/FONT via FOND) with a
- * CoreText fallback (host Geneva) when the requested family isn't available. */
+/* Font Manager / text drawing: Mac bitmap fonts (NFNT/FONT via FOND) with a host fallback
+ * when the requested family isn't available: CoreText (Geneva) on macOS, elsewhere a
+ * built-in bitmap font (Spleen 6x12, scaled by whole multiples). */
 #include "qd.h"
 #include "trapnums.h"
 #include "../fs/vfs.h"
 #include <stdio.h>
 #include <stdlib.h>
+#if defined(__APPLE__) && !defined(POP2_BUILTIN_FONT)
 #include <CoreText/CoreText.h>
 #include <CoreGraphics/CoreGraphics.h>
+#else
+#include <string.h>
+#include "hostfont.h"
+#endif
 
 maddr qd_port_bits(maddr port);
 
@@ -63,6 +69,7 @@ static int find_font(int family, int size, int face, BmFont *out) {
     return 0;
 }
 
+#if defined(__APPLE__) && !defined(POP2_BUILTIN_FONT)
 /* ---- host fallback (CoreText) ---- */
 typedef struct { int size, face; CTFontRef font; int ascent, descent, leading; } HostFont;
 static HostFont hostfonts[8]; static int hostfont_n;
@@ -108,6 +115,49 @@ static int host_render(HostFont *hf, const uint8_t *text, int len, uint8_t **cov
     CFRelease(line); CFRelease(as); CFRelease(attr); CFRelease(s);
     return width;
 }
+#else
+/* ---- host fallback (built-in bitmap font) ---- */
+typedef struct { int size, face, scale; int ascent, descent, leading; } HostFont;
+static HostFont hostfonts[8]; static int hostfont_n;
+static HostFont *host_font(int size, int face) {
+    if (size <= 0) size = 12;
+    for (int i = 0; i < hostfont_n; i++) if (hostfonts[i].size == size && hostfonts[i].face == face) return &hostfonts[i];
+    if (hostfont_n == 8) hostfont_n = 0;
+    HostFont *h = &hostfonts[hostfont_n++];
+    h->size = size; h->face = face;
+    h->scale = (size + HOSTFONT_H / 2) / HOSTFONT_H;
+    if (h->scale < 1) h->scale = 1;
+    h->ascent = (HOSTFONT_H - HOSTFONT_DESCENT) * h->scale;
+    h->descent = HOSTFONT_DESCENT * h->scale;
+    h->leading = h->scale;
+    return h;
+}
+
+/* Render text into an 8-bit coverage buffer (rows from the top of the ascent); returns
+ * the advance width. Bold draws each pixel twice, one pixel apart. */
+static int host_render(HostFont *hf, const uint8_t *text, int len, uint8_t **cov, int *cw, int *ch) {
+    int sc = hf->scale, bold = hf->face & 1;
+    int adv = HOSTFONT_W * sc + bold;
+    int width = len * adv;
+    if (cov) {
+        int W = width + 2, H = hf->ascent + hf->descent + 1;
+        *cw = W; *ch = H;
+        *cov = calloc((size_t)W * H, 1);
+        for (int k = 0; k < len; k++) {
+            int c = text[k] < 0x20 ? '?' : text[k];
+            const uint8_t *g = hostfont[c - 0x20];
+            for (int r = 0; r < HOSTFONT_H; r++)
+                for (int b = 0; b < HOSTFONT_W; b++) {
+                    if (!(g[r] & (0x80 >> b))) continue;
+                    for (int yy = 0; yy < sc; yy++)
+                        for (int xx = 0; xx < sc + bold; xx++)
+                            (*cov)[(r * sc + yy) * W + k * adv + b * sc + xx] = 255;
+                }
+        }
+    }
+    return width;
+}
+#endif
 
 /* ---- port font resolution ---- */
 typedef struct { BmFont *bm; HostFont *host; double scale; int face, size; } FontSel;

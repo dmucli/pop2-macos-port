@@ -20,7 +20,7 @@ static int headless = 1;
 static uint32_t last_dirty, last_clut;
 static uint32_t last_present_ms;
 static uint32_t rgb[256];
-static int cursor_visible = 1;
+static int cursor_visible = 1, no_cursor;
 
 static SDL_Texture *crt_tex;
 static int display_mode = -1;
@@ -30,9 +30,15 @@ int platform_init(int scale) {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS | SDL_INIT_GAMECONTROLLER) != 0) { fprintf(stderr, "SDL: %s\n", SDL_GetError()); return -1; }
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
     SDL_SetHint(SDL_HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK, "0");
+    /* extra controller mappings: a gamecontrollerdb file, Recalbox's es_input.cfg */
+    if (getenv("POP2_GAMECONTROLLERDB")) SDL_GameControllerAddMappingsFromFile(getenv("POP2_GAMECONTROLLERDB"));
+    if (getenv("POP2_ES_INPUT")) input_load_es_input(getenv("POP2_ES_INPUT"));
+    /* POP2_FULLSCREEN=1: the whole screen, no mouse pointer (Recalbox) */
+    int full = getenv("POP2_FULLSCREEN") && *getenv("POP2_FULLSCREEN") == '1';
     if (scale < 1) scale = 1;
     win = SDL_CreateWindow("Prince of Persia 2", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                           qd_screen_w * scale, qd_screen_h * scale, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
+                           qd_screen_w * scale, qd_screen_h * scale,
+                           full ? SDL_WINDOW_FULLSCREEN_DESKTOP : SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!win) { fprintf(stderr, "SDL window: %s\n", SDL_GetError()); return -1; }
     /* never wait for the display: the game runs on this thread and presents from inside
      * its own loops (a blocking present costs up to a frame each time) */
@@ -42,6 +48,10 @@ int platform_init(int scale) {
     SDL_RenderSetLogicalSize(ren, qd_screen_w, qd_screen_h);
     tex = SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, qd_screen_w, qd_screen_h);
     headless = 0;
+    if (full) { no_cursor = 1; SDL_ShowCursor(SDL_DISABLE); }
+    /* POP2_DISPLAY=pixels|sharp|smooth|crt: the display mode, not saved */
+    static const char *const modes[DISPLAY_COUNT] = { "pixels", "sharp", "smooth", "crt" };
+    for (int m = 0; m < DISPLAY_COUNT && getenv("POP2_DISPLAY"); m++) if (!strcmp(getenv("POP2_DISPLAY"), modes[m])) display_mode = m;
     apply_display_mode();
     input_load_keys();
     sound_init();
@@ -217,7 +227,7 @@ void platform_poll(void) {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
-            case SDL_QUIT: ExitToShell(); break;
+            case SDL_QUIT: fprintf(stderr, "quit requested (window closed, Hotkey+Start or a signal)\n"); ExitToShell(); break;
             case SDL_KEYDOWN: case SDL_KEYUP: {
                 uint16_t mods = mac_mods(SDL_GetModState());
                 if (e.type == SDL_KEYDOWN && (mods & 0x0100) && e.key.keysym.sym == SDLK_f) { toggle_fullscreen(); break; }
@@ -246,7 +256,7 @@ void platform_poll(void) {
 }
 
 void platform_set_cursor_visible(int v) {
-    if (headless || v == cursor_visible) return;
+    if (headless || no_cursor || v == cursor_visible) return;
     cursor_visible = v;
     SDL_ShowCursor(v ? SDL_ENABLE : SDL_DISABLE);
 }

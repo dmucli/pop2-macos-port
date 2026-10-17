@@ -232,14 +232,24 @@ void mods_quick_save(void) { if (mods_playing()) want_save = 1; else macos_beep(
 void mods_quick_load(void) { if (states_count() > 0) states_request_load(0); else macos_beep(); }
 
 /* the level's frame loop starts: save states from another level are no longer valid */
-void mods_level_start(void) { in_level = 1; level_id++; ring_clear(); saved_minutes = -1; }
+void mods_level_start(void) {
+    in_level = 1; level_id++; ring_clear(); saved_minutes = -1;
+    if (!runtime_deterministic) {
+        extern uint64_t runtime_us(void);
+        fprintf(stderr, "[game] level %d%s starts (%llu s)\n", (int16_t)rd16(G_LEVEL), rd16(A5(-0x4ffe)) ? " (attract mode)" : "",
+                (unsigned long long)(runtime_us() / 1000000));
+    }
+}
 
 /* a level is being played: its frame loop is running (menus pause the game, so this is
  * not a matter of time since the last frame) */
 #define G_DEMO           A5(-0x4ffe)    /* word: a recorded game is playing (attract mode) */
 int mods_playing(void) { return active() && in_level && rd16(G_DEMO) == 0; }
 int mods_in_level(void) { return active() && in_level; }
-void mods_level_end(void) { in_level = 0; want_level = 0; }
+void mods_level_end(void) {
+    in_level = 0; want_level = 0;
+    if (!runtime_deterministic) fprintf(stderr, "[game] level %d ends, next %d\n", (int16_t)rd16(G_LEVEL), (int16_t)rd16(G_NEXT_LEVEL));
+}
 
 /* debug: the whole emulated memory but the keys held (FNV-1a) */
 static uint64_t mem_hash(void) {
@@ -287,7 +297,8 @@ void mods_frame(void) {
         }
         if (*getenv("POP2_MODS_SELFTEST") == '2') {   /* cheats */
             if (frame_no == 1) { mod[MOD_INFINITE_TIME] = mod[MOD_INFINITE_HEALTH] = 1; }
-            if (frame_no % 40 == 0) fprintf(stderr, "[mods] frame %d level %d minutes %d frames %d life %d/%d\n", frame_no,
+            if (frame_no % 40 == 0) fprintf(stderr, "[mods] frame %d%s level %d minutes %d frames %d life %d/%d\n", frame_no,
+                rd16(G_DEMO) ? " (demo)" : "",
                 (int16_t)rd16(A5(-0x4fd2)), (int16_t)rd16(G_MINUTES_LEFT), (int16_t)rd16(G_FRAMES_LEFT),
                 (int16_t)rd16(G_KID + CH_LIFE), (int16_t)rd16(G_KID + CH_MAXLIFE));
             if (frame_no == 60) { fprintf(stderr, "[mods] next level\n"); mods_next_level(); }

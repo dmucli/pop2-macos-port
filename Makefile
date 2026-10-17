@@ -1,17 +1,25 @@
-# Prince of Persia 2 port — build with `make` (needs Xcode CLT and SDL2 from Homebrew)
+# Prince of Persia 2 port — build with `make` (macOS: Xcode CLT and SDL2 from Homebrew;
+# Linux: a C compiler, SDL2 and zlib development files; see packaging/recalbox for Recalbox)
 CC      ?= clang
 SDL_CF  := $(shell sdl2-config --cflags)
 SDL_LD  := $(shell sdl2-config --libs)
 CFLAGS  ?= -O2 -g
 CFLAGS  += -std=c11 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Isrc -Ithird_party/musashi $(SDL_CF)
+ifeq ($(shell uname -s),Darwin)
 LDFLAGS += $(SDL_LD) -lz -framework CoreText -framework CoreGraphics -framework CoreFoundation -framework Cocoa
+OBJC_SRC := $(wildcard src/platform/*.m)
+else
+# plain char is signed on macOS, where the port was verified: keep it so on ARM Linux
+CFLAGS  += -D_DEFAULT_SOURCE -D_GNU_SOURCE -fsigned-char
+LDFLAGS += $(SDL_LD) -lz -lm -lpthread
+OBJC_SRC :=
+endif
 BUILD   := build
 
 MUSASHI := third_party/musashi
 MUSASHI_SRC := $(MUSASHI)/m68kcpu.c $(MUSASHI)/m68kdasm.c $(BUILD)/m68kops.c $(MUSASHI)/softfloat/softfloat.c
 GAME_SRC := $(wildcard src/game/*.c src/game/*/*.c)
 SRC := $(wildcard src/*.c src/mac/*.c src/cpu/*.c src/fs/*.c src/platform/*.c) $(filter-out src/game/gen/%,$(GAME_SRC)) src/game/gen/glue.c
-OBJC_SRC := $(wildcard src/platform/*.m)
 TRAPS_JSON ?= $(CURDIR)/../work/traps.json
 # CORE=mini: release build without the 68k emulator (src/cpu/minicore.c runs only the
 # dispatch instructions left once every function is ported); default: the Musashi emulator.
@@ -139,10 +147,27 @@ dist: app
 	ditto -c -k --keepParent "$(APP)" "$(ZIP)"
 	@echo "built $(ZIP)"
 
+# ---- Recalbox (Raspberry Pi 4/5): the Linux arm64 binary, built in Docker, and the files of
+# the port; unzip build/PoP2-Port-Recalbox-arm64.zip into /recalbox/share (packaging/recalbox)
+RBX := build/recalbox
+RBX_GAME := $(RBX)/roms/ports/Prince of Persia 2
+recalbox:
+	tools/build_linux.sh arm64
+	rm -rf $(RBX) build/PoP2-Port-Recalbox-arm64.zip
+	mkdir -p "$(RBX_GAME)/pop2" "$(RBX)/system/.emulationstation"
+	cp build/linux-arm64/pop2.stripped "$(RBX_GAME)/pop2/pop2"
+	cp packaging/recalbox/pop2.sh "$(RBX_GAME)/pop2/"
+	cp LICENSE "$(RBX_GAME)/pop2/LICENSE.txt"
+	cp third_party/spleen/LICENSE "$(RBX_GAME)/pop2/LICENSE-spleen-font.txt"
+	cp packaging/recalbox/gamelist.xml packaging/recalbox/_readme.txt "$(RBX_GAME)/"
+	cp packaging/recalbox/systemlist.xml "$(RBX)/system/.emulationstation/"
+	cd $(RBX) && zip -qr ../PoP2-Port-Recalbox-arm64.zip roms system
+	@echo "built build/PoP2-Port-Recalbox-arm64.zip"
+
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all clean check app dist
+.PHONY: all clean check app dist recalbox
 
 # keep the rewritten sources (for reading compiler errors and debugging)
 .SECONDARY: $(patsubst src/game/%.c,$(BUILD)/nat/%.c,$(PORTED_SRC)) $(patsubst src/game/%.c,$(BUILD)/chk/%.c,$(PORTED_SRC))

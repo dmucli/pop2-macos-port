@@ -23,6 +23,14 @@ open it once, then in System Settings > Privacy & Security click **Open Anyway**
 `xattr -dr com.apple.quarantine "/Applications/PoP2 Port.app"`). It then asks for your
 disk image of the original game.
 
+### Recalbox and Linux
+
+The port also builds for Linux (SDL2), and runs on Recalbox (Raspberry Pi 4/5) as a port
+system of its own, installed on the share partition: see
+[packaging/recalbox/README.md](packaging/recalbox/README.md) (`make recalbox` builds the
+package with Docker). Known issue: on Recalbox the game was reported to quit at the end of
+level 3; the log (`/recalbox/share/saves/pop2/pop2.log`) now records crashes and quits.
+
 ## Extras
 
 Additions of this port, outside the original game (they are off in the verification runs):
@@ -51,6 +59,9 @@ Requirements: Xcode command line tools, SDL2 from Homebrew (`brew install sdl2`)
 
 ```sh
 make app BUILD=build/release CORE=mini     # build/release/PoP2 Port.app (no 68k emulator)
+# release: Developer ID signature, notarization (credentials from `xcrun notarytool
+# store-credentials notary`), zip in build/release/PoP2-Port-macOS.zip
+make dist BUILD=build/release CORE=mini SIGN_ID="Developer ID Application: ..."
 ```
 
 Development builds keep the Musashi 68k emulator (MIT licence, `third_party/musashi`),

@@ -6,6 +6,7 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <execinfo.h>
 
 void traps_loader_init(void);
 void runtime_init_lowmem(void);
@@ -19,6 +20,19 @@ const char *macos_locate_disk_image(int force_ask);
 const char *macos_support_dir(void);
 void macos_alert(const char *title, const char *text);
 int  macos_in_app_bundle(void);
+
+/* A crash: say where (signal, the ported functions being run, the host stack) in the log. */
+static void on_crash(int sig) {
+    signal(sig, SIG_DFL);
+    fprintf(stderr, "\n*** crashed: signal %d (%s)\n", sig, strsignal(sig));
+    extern void native_print_stack(FILE *f);
+    native_print_stack(stderr);
+    void *bt[64];
+    int n = backtrace(bt, 64);
+    backtrace_symbols_fd(bt, n, 2);
+    fflush(stderr);
+    raise(sig);
+}
 
 static void on_term(int sig) {
     (void)sig;
@@ -88,6 +102,10 @@ int main(int argc, char **argv) {
     runtime_system_resources();
     { extern void native_init(void); native_init(); }
     if (headless) signal(SIGTERM, on_term);
+    if (!getenv("POP2_CHECK")) {
+        int sigs[] = { SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT };
+        for (int i = 0; i < 5; i++) signal(sigs[i], on_crash);
+    }
     if (!headless) { extern void platform_menu_early_init(void); platform_menu_early_init(); }
     if (!headless && platform_init(scale)) return 1;
     if (loader_launch(app)) return 1;

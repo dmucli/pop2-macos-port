@@ -299,15 +299,26 @@ uint32_t call_ptr(maddr fn, const char *fmt, ...) {
  * emulated stack by the nat_ wrapper, entered through its glue exactly as a 68k caller would
  * enter it (minus the CPU): the function sees its real argument slots and stack depth. */
 static uint32_t call_native_fn_(int i);
+/* the chain of ported functions being run, for the crash report (native_print_stack) */
+static int shadow[256];
+static int shadow_n;
 uint32_t call_native_fn(int i) {
-    if (i == FN_FUN_00016654) mods_frame();             /* start of a game frame (Extras) */
+    if (shadow_n < 256) shadow[shadow_n] = i;
+    shadow_n++;
+    uint32_t r;
+    if (i == FN_FUN_00016654) { mods_frame(); r = call_native_fn_(i); }   /* start of a game frame (Extras) */
     else if (i == FN_FUN_0001652c) {                    /* a level's frame loop (Extras) */
         mods_level_start();
-        uint32_t r = call_native_fn_(i);
+        r = call_native_fn_(i);
         mods_level_end();
-        return r;
-    }
-    return call_native_fn_(i);
+    } else r = call_native_fn_(i);
+    shadow_n--;
+    return r;
+}
+void native_print_stack(FILE *f) {
+    fprintf(f, "ported functions being run (innermost last):\n");
+    int n = shadow_n < 256 ? shadow_n : 256;
+    for (int k = n > 40 ? n - 40 : 0; k < n; k++) fprintf(f, "  %s\n", fn_info[shadow[k]].name);
 }
 static uint32_t call_native_fn_(int i) {
     /* like "jsr off(A5)": while the function's segment is not loaded, enter through the jump

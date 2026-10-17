@@ -8,6 +8,7 @@
 #include "../mac/mac.h"
 #include <SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 void event_key(int down, uint8_t keycode, uint8_t ch, uint16_t mods, int repeat);
@@ -34,9 +35,12 @@ const char *input_action_name(int a) { return a >= 0 && a < ACT_COUNT ? acts[a].
 int  input_action_key(int a) { return key_for[a]; }
 int  input_action_default_key(int a) { return acts[a].def; }
 void input_load_keys(void) {
+    const char *hk = getenv("POP2_HOTKEYS");
     for (int a = 0; a < ACT_COUNT; a++) {
+        int paddef = acts[a].paddef;
+        if (hk && *hk == '1' && (a == ACT_QSAVE || a == ACT_QLOAD)) paddef = -1;   /* hotkey combos instead */
         key_for[a] = macos_pref_int(acts[a].pref, acts[a].def);
-        pad_for[a] = macos_pref_int(acts[a].padpref, acts[a].paddef);
+        pad_for[a] = macos_pref_int(acts[a].padpref, paddef);
         if (pad_for[a] >= PAD_CODES) pad_for[a] = -1;
     }
 }
@@ -184,9 +188,125 @@ static int pad_track(const SDL_Event *e) {
     return -1;
 }
 
+/* ---- Recalbox conventions (POP2_HOTKEYS=1): Hotkey (Select, or the pad's hotkey button,
+ * which SDL reports as Guide) with Start quits, with Y saves a state, with X loads the
+ * newest, with Left rewinds while held; Select alone keeps its action (show time left).
+ * While a dialog waits for an answer, A or Start is Return and B is Esc. ---- */
+int  wm_modal_active(void);
+static int hotkeys = -1, hk_held, hk_combo;
+static uint8_t swallowed[PAD_AXIS];    /* buttons whose release belongs to a combo or a dialog */
+
+static void key_tap(uint8_t kc, uint8_t ch) { event_key(1, kc, ch, 0, 0); event_key(0, kc, ch, 0, 0); }
+
+static void hotkey_combo(int b, int down) {
+    switch (b) {
+        case SDL_CONTROLLER_BUTTON_START:
+            if (down) { SDL_Event q = { .type = SDL_QUIT }; SDL_PushEvent(&q); }
+            break;
+        case SDL_CONTROLLER_BUTTON_Y: if (down) press(ACT_QSAVE, 1, 0, 0); break;
+        case SDL_CONTROLLER_BUTTON_X: if (down) press(ACT_QLOAD, 1, 0, 0); break;
+        case SDL_CONTROLLER_BUTTON_DPAD_LEFT: if (mods_playing() || !down) press(ACT_REWIND, down, 0, 0); break;
+    }
+}
+
+/* 1: the event is used up here */
+static int special_button(const SDL_Event *e) {
+    if (e->type != SDL_CONTROLLERBUTTONDOWN && e->type != SDL_CONTROLLERBUTTONUP) return 0;
+    int b = e->cbutton.button, down = e->type == SDL_CONTROLLERBUTTONDOWN;
+    if (b < 0 || b >= PAD_AXIS) return 0;
+    if (!down && swallowed[b]) {
+        swallowed[b] = 0;
+        if (hk_combo) hotkey_combo(b, 0);
+        return 1;
+    }
+    if (down && wm_modal_active()) {
+        if (b == SDL_CONTROLLER_BUTTON_A || b == SDL_CONTROLLER_BUTTON_START) { key_tap(0x24, 13); swallowed[b] = 1; return 1; }
+        if (b == SDL_CONTROLLER_BUTTON_B) { key_tap(0x35, 27); swallowed[b] = 1; return 1; }
+    }
+    if (hotkeys < 0) hotkeys = getenv("POP2_HOTKEYS") && *getenv("POP2_HOTKEYS") == '1';
+    if (!hotkeys) return 0;
+    if (b == SDL_CONTROLLER_BUTTON_BACK || b == SDL_CONTROLLER_BUTTON_GUIDE) {
+        if (down) { if (!hk_held) hk_combo = 0; hk_held |= 1 << b; return 1; }
+        hk_held &= ~(1 << b);
+        if (!hk_held && !hk_combo)             /* Select alone: its own action */
+            for (int a = 0; a < ACT_COUNT; a++)
+                if (pad_for[a] == SDL_CONTROLLER_BUTTON_BACK) { press(a, 1, 0, 0); press(a, 0, 0, 0); }
+        return 1;
+    }
+    if (down && hk_held) {
+        /* a lost release must not leave the hotkey held: ask the controller */
+        SDL_GameController *gc = SDL_GameControllerFromInstanceID(e->cbutton.which);
+        if (gc && !SDL_GameControllerGetButton(gc, SDL_CONTROLLER_BUTTON_BACK) &&
+            !SDL_GameControllerGetButton(gc, SDL_CONTROLLER_BUTTON_GUIDE)) hk_held = 0;
+    }
+    if (down && hk_held) { hk_combo = 1; swallowed[b] = 1; hotkey_combo(b, 1); return 1; }
+    return 0;
+}
+
 void input_controller_event(const SDL_Event *e) {
+    if (special_button(e)) return;
     pad_track(e);
     pad_update();
+}
+
+/* ---- controller mappings from EmulationStation's es_input.cfg (Recalbox): the pads as
+ * configured in Recalbox, converted as its configgen does for SDL games ---- */
+static int xml_attr(const char *tag, const char *end, const char *name, char *out, size_t n) {
+    char pat[40];
+    snprintf(pat, sizeof pat, " %s=\"", name);
+    const char *p = strstr(tag, pat);
+    if (!p || p > end) return 0;
+    p += strlen(pat);
+    const char *q = strchr(p, '"');
+    if (!q || q > end) return 0;
+    size_t l = (size_t)(q - p) < n - 1 ? (size_t)(q - p) : n - 1;
+    memcpy(out, p, l); out[l] = 0;
+    return 1;
+}
+static const char *sdl_name(const char *es) {
+    static const char *const map[][2] = {
+        { "south", "a" }, { "b", "a" }, { "east", "b" }, { "a", "b" }, { "north", "y" }, { "x", "y" },
+        { "west", "x" }, { "y", "x" }, { "start", "start" }, { "select", "back" }, { "hotkey", "guide" },
+        { "l1", "leftshoulder" }, { "pageup", "leftshoulder" }, { "r1", "rightshoulder" }, { "pagedown", "rightshoulder" },
+        { "l2", "lefttrigger" }, { "r2", "righttrigger" }, { "l3", "leftstick" }, { "r3", "rightstick" },
+        { "up", "dpup" }, { "down", "dpdown" }, { "left", "dpleft" }, { "right", "dpright" },
+        { "joystick1up", "-lefty" }, { "joystick1left", "-leftx" }, { "joystick1down", "+lefty" }, { "joystick1right", "+leftx" },
+        { "joystick2up", "-righty" }, { "joystick2left", "-rightx" }, { "joystick2down", "+righty" }, { "joystick2right", "+rightx" } };
+    for (size_t i = 0; i < sizeof map / sizeof map[0]; i++) if (!strcmp(map[i][0], es)) return map[i][1];
+    return NULL;
+}
+void input_load_es_input(const char *path) {
+    FILE *f = fopen(path, "rb");
+    if (!f) { fprintf(stderr, "[input] %s: not found\n", path); return; }
+    static char buf[1 << 18];
+    size_t n = fread(buf, 1, sizeof buf - 1, f);
+    fclose(f);
+    buf[n] = 0;
+    int count = 0;
+    for (char *c = strstr(buf, "<inputConfig"); c; c = strstr(c + 1, "<inputConfig")) {
+        char *ce = strstr(c, "</inputConfig>"), *te = strchr(c, '>');
+        if (!ce || !te) break;
+        char type[16], name[128], guid[64];
+        if (!xml_attr(c, te, "type", type, sizeof type) || strcmp(type, "joystick") ||
+            !xml_attr(c, te, "deviceGUID", guid, sizeof guid) || !xml_attr(c, te, "deviceName", name, sizeof name)) continue;
+        for (char *k = name; *k; k++) if (*k == ',') *k = ' ';
+        char line[2048];
+        int l = snprintf(line, sizeof line, "%s,%s,platform:Linux,", guid, name);
+        for (char *in = strstr(c, "<input "); in && in < ce; in = strstr(in + 1, "<input ")) {
+            char *ie = strchr(in, '>');
+            char iname[32], itype[16], id[16], val[16];
+            if (!ie || !xml_attr(in, ie, "name", iname, sizeof iname) || !xml_attr(in, ie, "type", itype, sizeof itype) ||
+                !xml_attr(in, ie, "id", id, sizeof id) || !xml_attr(in, ie, "value", val, sizeof val)) continue;
+            const char *sn = sdl_name(iname);
+            if (!sn || l >= (int)sizeof line - 64) continue;
+            if (!strcmp(itype, "axis")) l += snprintf(line + l, sizeof line - l, "%s:%sa%s,", sn, atoi(val) < 0 ? "-" : "+", id);
+            else if (!strcmp(itype, "hat")) l += snprintf(line + l, sizeof line - l, "%s:h%s.%s,", sn, id, val);
+            else if (!strcmp(itype, "button")) l += snprintf(line + l, sizeof line - l, "%s:b%s,", sn, id);
+        }
+        if (SDL_GameControllerAddMapping(line) >= 0) count++;
+        else fprintf(stderr, "[input] mapping refused (%s): %s\n", SDL_GetError(), line);
+    }
+    fprintf(stderr, "[input] %d controller mapping(s) from %s\n", count, path);
 }
 
 /* Controls window: called about 60 times a second while it is open, outside the game's

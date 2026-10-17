@@ -893,7 +893,12 @@ static void edit_key(maddr d, uint8_t ch) {
 }
 
 /* Modal loop: returns item hit. filter: 68k ModalFilterProc or 0 */
+/* a modal dialog is waiting for an answer (the controller then answers with Return / Esc) */
+static int modal_depth;
+int wm_modal_active(void) { return modal_depth > 0; }
+
 static int modal_loop(maddr d, maddr filter) {
+    modal_depth++;
     maddr evt = NewPtrClear(16);
     maddr itemp = NewPtrClear(2);
     draw_dialog_items(d);
@@ -931,6 +936,7 @@ static int modal_loop(maddr d, maddr filter) {
         }
     }
     DisposePtr(evt); DisposePtr(itemp);
+    modal_depth--;
     return result;
 }
 static void T_ModalDialog(uint16_t w) {
@@ -975,9 +981,9 @@ static void run_alert(int16_t id, int icon) {
         }
         int macos_game_alert(int kind, const char *text, const char *const *buttons, int n);
         extern void event_release_all(void);
-        int k = macos_game_alert(icon, text, bp, nb);
+        int k = macos_game_alert(icon, text, bp, nb);   /* -1: no native alerts (Linux) */
         event_release_all();
-        item = nb ? bitem[k] : 1;
+        item = k < 0 ? modal_loop(d, 0) : nb ? bitem[k] : 1;
     } else item = modal_loop(d, 0);
     close_window(d);
     ret16((uint16_t)item);

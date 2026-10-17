@@ -30,6 +30,7 @@ const char *input_pad_name(void);         /* connected controller, NULL = none *
 int  input_pad_count(void);
 int  input_pad_generation(void);          /* changes when a controller is connected or removed */
 void input_pad_capture(int on);           /* Controls window open / closed */
+void input_load_es_input(const char *path);  /* controller mappings from Recalbox's es_input.cfg */
 int  input_pad_capture_poll(void);        /* while open: input just pressed, -1 = none */
 
 /* macos_app.m */

@@ -198,6 +198,13 @@ void runtime_trap_boundary(void) {
             extern void cpu_print_native_stats(void);
             if (getenv("POP2_NATIVE_STATS")) cpu_print_native_stats();
             fprintf(stderr, "exit at virtual %ld ms\n", exit_at);
+            if (getenv("POP2_HASH_AT_EXIT")) {   /* compare runs across builds and hosts */
+                uint64_t h = 1469598103934665603ull;
+                for (uint32_t i = 0; i < MEM_SIZE; i++) h = (h ^ M[i]) * 1099511628211ull;
+                fprintf(stderr, "memory hash %016llx\n", (unsigned long long)h);
+                FILE *df = getenv("POP2_DUMP_AT_EXIT") ? fopen(getenv("POP2_DUMP_AT_EXIT"), "wb") : NULL;
+                if (df) { fwrite(M, 1, MEM_SIZE, df); fclose(df); }
+            }
             fflush(NULL);                       /* stderr and any debug logs (trap log) */
             _exit(0);
         }
