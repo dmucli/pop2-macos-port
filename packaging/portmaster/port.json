@@ -1,0 +1,28 @@
+{
+    "version": 2,
+    "name": "pop2.zip",
+    "items": [
+        "pop2/",
+        "Prince of Persia 2.sh"
+    ],
+    "items_opt": null,
+    "attr": {
+        "title": "Prince of Persia 2",
+        "desc": "Prince of Persia 2: The Shadow and the Flame, the 1993 Macintosh version, running natively: the original program translated to C (unofficial). Save states with pictures, rewind, extras menu.",
+        "inst": "Copy the disk image of your own copy of the Macintosh version (.hfv, .dsk, .img, .image, .toast, .iso, .cdr or .bin) into ports/pop2.",
+        "genres": [
+            "platformer"
+        ],
+        "porter": [
+            "dmucli"
+        ],
+        "image": {},
+        "rtr": false,
+        "runtime": null,
+        "reqs": [],
+        "arch": [
+            "aarch64",
+            "x86_64"
+        ]
+    }
+}

@@ -88,7 +88,14 @@ static void T_GetAppParms(uint16_t w) {
 int loader_launch(const char *app_path) {
     uint32_t parid; char leaf[64];
     VNode *app = vfs_resolve_path(2, app_path, &parid, leaf);
-    if (!app || app->isdir) { fprintf(stderr, "application \"%s\" not found in volume\n", app_path); return -1; }
+    if (!app || app->isdir) {
+        /* another layout (a CD, a copied folder): the application by its name and type */
+        app = NULL;
+        for (VNode *n = g_vol.nodes; n && !app; n = n->next)
+            if (!n->isdir && !n->deleted && !mac_strcasecmp(n->name, "Prince of Persia 2") && !memcmp(n->finfo, "APPL", 4)) app = n;
+        if (!app) { fprintf(stderr, "Prince of Persia 2 not found on this disk (looked for \"%s\")\n", app_path); return -1; }
+        fprintf(stderr, "application found in folder %u\n", app->parid);
+    }
     int16_t ref = rsrc_open_node(app, 1);
     if (ref < 0) { fprintf(stderr, "cannot open application resources\n"); return -1; }
     wr16(LM_CurApRefNum, (uint16_t)ref);

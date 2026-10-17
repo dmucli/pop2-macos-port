@@ -10,7 +10,7 @@ void platform_set_display_mode(int m);
 
 /* input.c: key remapping and game controllers */
 enum { ACT_UP, ACT_DOWN, ACT_LEFT, ACT_RIGHT, ACT_BUTTON1, ACT_BUTTON2, ACT_PAUSE, ACT_TIME, ACT_REWIND,
-       ACT_QSAVE, ACT_QLOAD, ACT_ADDTIME, ACT_ADDHEALTH, ACT_COUNT };
+       ACT_QSAVE, ACT_QLOAD, ACT_ADDTIME, ACT_ADDHEALTH, ACT_MENU, ACT_COUNT };
 const char *input_action_name(int a);
 int  input_action_key(int a);            /* Mac key code chosen for the action, -1 = none */
 int  input_action_default_key(int a);
@@ -31,6 +31,17 @@ int  input_pad_count(void);
 int  input_pad_generation(void);          /* changes when a controller is connected or removed */
 void input_pad_capture(int on);           /* Controls window open / closed */
 void input_load_es_input(const char *path);  /* controller mappings from Recalbox's es_input.cfg */
+void input_reset(void);                   /* forget held buttons (after the overlay menu) */
+
+/* overlay.c: drawn over the game picture by the host */
+void overlay_draw(void);
+int  overlay_visible(void);               /* a message or the rewind indicator is showing */
+void overlay_menu_request(void);
+int  overlay_menu_pending(void);
+void overlay_menu_run(void);              /* modal */
+/* platform_sdl.c: hide the Mac menu bar the game draws (Recalbox) */
+int  platform_menubar_hidden(void);
+void platform_set_menubar_hidden(int h);
 int  input_pad_capture_poll(void);        /* while open: input just pressed, -1 = none */
 
 /* macos_app.m */

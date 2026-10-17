@@ -1,8 +1,8 @@
 Prince of Persia 2 (Macintosh) - unofficial port for Recalbox
 =============================================================
 
-Put the HFS disk image of YOUR OWN copy of the Macintosh version here, named PoP2.hfv.
-No game data comes with this port.
+Put the disk image of YOUR OWN copy of the Macintosh version here (any name; .hfv, .dsk,
+.img, .image, .toast, .iso, .cdr or .bin). No game data comes with this port.
 
 Controls
   D-pad / left stick ...... move
@@ -10,6 +10,8 @@ Controls
   B ....................... second button
   Start ................... pause (on the title screen: start a game)
   Select .................. show the time left
+  Hotkey + B .............. on-screen menu (save states with pictures, levels, cheats,
+                            display, statistics)
   Hotkey + Y .............. save state (the last 10 are kept)
   Hotkey + X .............. load the newest save state (works from the title screen too)
   Hotkey + Left (hold) .... rewind

@@ -103,6 +103,35 @@ static VNode *new_node(void) {
     return n;
 }
 
+/* Where the HFS volume starts in a disk image file: a raw volume (.hfv, .dsk), a Disk Copy
+ * 4.2 image (.image, .img), a disk with an Apple partition map (CD and hard disk images:
+ * .toast, .iso, .cdr), or any of these in MacBinary (.bin). -1: no HFS volume found. */
+static int is_hfs(const uint8_t *p, size_t len, size_t off) { return off + 1026 <= len && b16(p + off + 1024) == 0x4244; }
+static long hfs_offset(const uint8_t *p, size_t len, int depth) {
+    if (is_hfs(p, len, 0)) return 0;
+    if (len > 84 && p[0] <= 63 && b16(p + 0x52) == 0x0100 && is_hfs(p, len, 84)) return 84;   /* Disk Copy 4.2 */
+    if (len > 1024 && b16(p) == 0x4552) {                                                     /* 'ER': partition map */
+        uint32_t bs = b16(p + 2) ? b16(p + 2) : 512;
+        uint32_t strides[2] = { 512, bs };
+        for (int k = 0; k < 2; k++)
+            for (uint32_t i = 1; i < 64 && (size_t)(i + 1) * strides[k] <= len; i++) {
+                const uint8_t *pm = p + (size_t)i * strides[k];
+                if (b16(pm) != 0x504D) break;                                                 /* 'PM' */
+                if (memcmp(pm + 48, "Apple_HFS", 9)) continue;
+                size_t starts[2] = { (size_t)b32(pm + 8) * 512, (size_t)b32(pm + 8) * bs };
+                for (int j = 0; j < 2; j++) if (is_hfs(p, len, starts[j])) return (long)starts[j];
+            }
+    }
+    if (depth == 0 && len > 128 && p[0] == 0 && p[74] == 0 && p[82] == 0 && p[1] >= 1 && p[1] <= 63) {   /* MacBinary */
+        uint32_t dlen = b32(p + 83);
+        if (dlen && 128 + (size_t)dlen <= len) {
+            long o = hfs_offset(p + 128, dlen, 1);
+            if (o >= 0) return 128 + o;
+        }
+    }
+    return -1;
+}
+
 static int mount_image(const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) { fprintf(stderr, "cannot open %s: %s\n", path, strerror(errno)); return -1; }
@@ -110,9 +139,11 @@ static int mount_image(const char *path) {
     uint8_t *img = malloc((size_t)len);
     if (fread(img, 1, (size_t)len, f) != (size_t)len) { fclose(f); free(img); return -1; }
     fclose(f);
-    Hfs h = { img, (size_t)len };
-    const uint8_t *mdb = img + 1024;
-    if (len < 2048 || b16(mdb) != 0x4244) { fprintf(stderr, "%s: not an HFS volume\n", path); free(img); return -1; }
+    long off = len >= 2048 ? hfs_offset(img, (size_t)len, 0) : -1;
+    if (off < 0) { fprintf(stderr, "%s: no HFS volume in this file\n", path); free(img); return -1; }
+    if (off) fprintf(stderr, "%s: HFS volume at offset %ld\n", path, off);
+    Hfs h = { img + off, (size_t)(len - off) };
+    const uint8_t *mdb = h.img + 1024;
     g_vol.crdate = b32(mdb + 2);
     h.alblksz = b32(mdb + 0x14);
     h.alblst = b16(mdb + 0x1C);

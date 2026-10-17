@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 extern maddr g_a5;
 extern int runtime_deterministic;
@@ -62,6 +63,7 @@ void mods_set(int m, int v) {
     if (m < 0 || m >= MOD_COUNT) return;
     mod[m] = v;
     macos_pref_set_int(pref_name[m], v);
+    if (v && (m == MOD_CHEAT_MODE || m == MOD_INFINITE_TIME || m == MOD_INFINITE_HEALTH)) mods_assisted();
     if (m == MOD_INFINITE_TIME) saved_minutes = -1;
     if (m == MOD_REWIND && !v) ring_clear();
     if (m == MOD_CHEAT_MODE && active()) {   /* takes effect at once */
@@ -84,10 +86,34 @@ void mods_next_level(void) {
 uint32_t nat_ResetSoundItem(int16_t p4);
 static int want_level, in_level;   /* in_level: a level's frame loop is running */
 static int want_time, want_health;
+
+/* ---- statistics ---- */
+static struct { int session_time, session_deaths; } session[15];
+static int att_level, att_clean, att_start, kid_alive, att_skipped;
+static int game_clock(void) { return (int16_t)rd16(A5(-0x4fce)) * 720 + (int16_t)rd16(A5(-0x4fc6)); }   /* 720 a minute */
+static int any_cheat(void) { load_prefs(); return mod[MOD_CHEAT_MODE] || mod[MOD_INFINITE_TIME] || mod[MOD_INFINITE_HEALTH]; }
+void mods_assisted(void) { att_clean = 0; }
+int  mods_attempt_clean(void) { return att_clean && !any_cheat(); }
+static void stat_add(const char *what, int level, int v) {
+    char k[32]; snprintf(k, sizeof k, "Stats.L%d.%s", level, what);
+    macos_pref_set_int(k, macos_pref_int(k, 0) + v);
+}
+void mods_level_stats(int level, LevelStats *out) {
+    memset(out, 0, sizeof *out);
+    if (level < 1 || level > 14) return;
+    char k[32];
+    snprintf(k, sizeof k, "Stats.L%d.Best", level); out->best = macos_pref_int(k, 0);
+    snprintf(k, sizeof k, "Stats.L%d.Deaths", level); out->deaths = macos_pref_int(k, 0);
+    snprintf(k, sizeof k, "Stats.L%d.Done", level); out->completions = macos_pref_int(k, 0);
+    out->session_time = session[level].session_time;
+    out->session_deaths = session[level].session_deaths;
+}
 static void selftest_title_load(void);
 void mods_goto_level(int level) {
     if (!mods_playing() || level < 1 || level > 14) { macos_beep(); return; }
     want_level = level;
+    mods_assisted();
+    att_skipped = 1;                                    /* not finished: left */
 }
 int mods_current_level(void) { return mods_playing() ? (int16_t)rd16(G_LEVEL) : 0; }
 
@@ -99,8 +125,8 @@ int mods_current_level(void) { return mods_playing() ? (int16_t)rd16(G_LEVEL) : 
 #define G_SHOW_TIME      A5(-0x4fa2)    /* word: request to display the time left */
 #define ADD_MINUTES      5
 #define MAX_LIFE         12
-void mods_add_time(void) { if (mods_playing()) want_time++; else macos_beep(); }
-void mods_add_health(void) { if (mods_playing()) want_health++; else macos_beep(); }
+void mods_add_time(void) { if (mods_playing()) { want_time++; mods_assisted(); } else macos_beep(); }
+void mods_add_health(void) { if (mods_playing()) { want_health++; mods_assisted(); } else macos_beep(); }
 static void apply_add_time(void) {
     int m = (int16_t)rd16(G_MINUTES_LEFT) + ADD_MINUTES * want_time;
     want_time = 0;
@@ -259,12 +285,19 @@ void mods_restore_flat(const uint8_t *mem, const uint8_t *core) {
 int mods_minutes_left(void) { return (int16_t)rd16(G_MINUTES_LEFT); }
 
 void mods_set_rewind_held(int held) { rewind_held = held; }
-void mods_quick_save(void) { if (mods_playing()) want_save = 1; else macos_beep(); }
-void mods_quick_load(void) { if (states_count() > 0) states_request_load(0); else macos_beep(); }
+void mods_quick_save(void) {
+    if (mods_playing()) want_save = 1;
+    else { macos_beep(); platform_toast("Save states are made during play"); }
+}
+void mods_quick_load(void) {
+    if (states_count() > 0) states_request_load(0);
+    else { macos_beep(); platform_toast("No save state yet"); }
+}
 
 /* the level's frame loop starts: save states from another level are no longer valid */
 void mods_level_start(void) {
     in_level = 1; level_id++; ring_clear(); saved_minutes = -1;
+    att_level = (int16_t)rd16(G_LEVEL); att_clean = 1; att_start = game_clock(); kid_alive = 1; att_skipped = 0;
     if (!runtime_deterministic) {
         extern uint64_t runtime_us(void);
         fprintf(stderr, "[game] level %d%s starts (%llu s)\n", (int16_t)rd16(G_LEVEL), rd16(A5(-0x4ffe)) ? " (attract mode)" : "",
@@ -279,6 +312,20 @@ int mods_playing(void) { return active() && in_level && rd16(G_DEMO) == 0; }
 int mods_in_level(void) { return active() && in_level; }
 void mods_level_end(void) {
     in_level = 0; want_level = 0; want_time = want_health = 0;
+    int lv = (int16_t)rd16(G_LEVEL), next = (int16_t)rd16(G_NEXT_LEVEL);
+    if (!runtime_deterministic && rd16(G_DEMO) == 0 && lv == att_level && lv >= 1 && lv <= 14) {
+        int secs = (att_start - game_clock()) / 12;
+        if (secs > 0) session[lv].session_time += secs;
+        if (!att_skipped && !cheat_forced && (next == lv + 1 || (lv == 14 && next > 14))) {   /* the level was finished */
+            stat_add("Done", lv, 1);
+            char k[32]; snprintf(k, sizeof k, "Stats.L%d.Best", lv);
+            int best = macos_pref_int(k, 0);
+            if (mods_attempt_clean() && secs > 0 && (!best || secs < best)) {
+                macos_pref_set_int(k, secs);
+                fprintf(stderr, "[stats] level %d: best time %d:%02d\n", lv, secs / 60, secs % 60);
+            }
+        }
+    }
     if (!runtime_deterministic) fprintf(stderr, "[game] level %d ends, next %d\n", (int16_t)rd16(G_LEVEL), (int16_t)rd16(G_NEXT_LEVEL));
 }
 
@@ -310,6 +357,14 @@ void mods_frame(void) {
         if (rd16(cur) == rd16(kid) && (int16_t)rd16(cur + CH_LIFE) > 0 && (int16_t)rd16(cur + CH_LIFE) < max)
             wr16(cur + CH_LIFE, (uint16_t)max);
     }
+    if (mods_playing()) {                                /* deaths, for the statistics */
+        int life = (int16_t)rd16(G_KID + CH_LIFE);
+        if (kid_alive && life <= 0 && att_level >= 1 && att_level <= 14) {
+            stat_add("Deaths", att_level, 1);
+            session[att_level].session_deaths++;
+        }
+        kid_alive = life > 0;
+    }
     static int selftest = -1, frame_no;
     if (selftest < 0) selftest = getenv("POP2_MODS_SELFTEST") != NULL;
     if (selftest) {   /* debug: quick save, load, rewind, with checks */
@@ -336,6 +391,19 @@ void mods_frame(void) {
             goto selftest_done;
         }
         char t = *getenv("POP2_MODS_SELFTEST");
+        if (t == '8') {   /* overlay pictures (POP2_OVERLAY_SHOTS) */
+            extern void platform_overlay_shot(const char *name);
+            if (frame_no == 20) want_save = 1;
+            if (frame_no == 22) platform_overlay_shot("toast_saved");
+            if (frame_no == 30) mods_add_health();
+            if (frame_no == 32) platform_overlay_shot("toast_health");
+            if (frame_no == 40) rewind_held = 1;
+            if (frame_no == 44) platform_overlay_shot("rewind");
+            if (frame_no == 48) rewind_held = 0;
+            if (frame_no == 60) { extern void overlay_menu_request(void); overlay_menu_request(); }
+            if (frame_no == 70) { fprintf(stderr, "[mods] overlay pictures done\n"); fflush(stderr); _exit(0); }
+            goto selftest_done;
+        }
         if (t == '7') {   /* add time and health */
             if (frame_no == 30 || frame_no == 32 || frame_no == 60 || frame_no == 62)
                 fprintf(stderr, "[mods] frame %d: minutes %d, life %d/%d\n", frame_no, (int16_t)rd16(G_MINUTES_LEFT),
@@ -385,9 +453,15 @@ void mods_frame(void) {
     }
     selftest_done:
     if (want_time) apply_add_time();
-    if (want_health) apply_add_health();
+    if (want_health) {
+        apply_add_health();
+        char t[40]; snprintf(t, sizeof t, "Health %d/%d", (int16_t)rd16(G_KID + CH_LIFE), (int16_t)rd16(G_KID + CH_MAXLIFE));
+        platform_toast(t);
+    }
     if (want_level) {
         int l = want_level; want_level = 0;
+        char t[24]; snprintf(t, sizeof t, "Level %d", l);
+        platform_toast(t);
         if (rd16(G_NEXT_LEVEL) == rd16(G_LEVEL)) {   /* not already leaving the level */
             wr16(G_NEXT_LEVEL, (uint16_t)l);
             nat_ResetSoundItem(0);                    /* as Command-L: stop the level's sounds */
@@ -395,21 +469,28 @@ void mods_frame(void) {
         return;
     }
     if (states_load_pending()) {
-        if (!states_load_now()) macos_beep();
-        else ring_clear();
+        if (!states_load_now()) { macos_beep(); platform_toast("This save state cannot be loaded"); }
+        else {
+            ring_clear();
+            att_level = (int16_t)rd16(G_LEVEL); att_start = game_clock(); att_clean = 0;
+            kid_alive = (int16_t)rd16(G_KID + CH_LIFE) > 0;
+            platform_toast("State loaded");
+        }
         if (selftest) fprintf(stderr, "[mods] memory hash after load %016llx\n", (unsigned long long)mem_hash());
         return;
     }
     if (want_save) {
         want_save = 0;
         if (selftest) fprintf(stderr, "[mods] memory hash at save %016llx\n", (unsigned long long)mem_hash());
-        if (rd16(G_DEMO) == 0) states_save_now(mods_current_level(), mods_minutes_left());
+        if (rd16(G_DEMO) == 0) { states_save_now(mods_current_level(), mods_minutes_left()); platform_toast("State saved"); }
     }
+    platform_rewinding(rewind_held && mod[MOD_REWIND]);
     if (rewind_held && mod[MOD_REWIND]) {
         if (ring_count <= 1) return;                     /* nothing older */
         ring_head = (ring_head + RING - 1) % RING; ring_count--;
         snap_free(&ring[ring_head]);                     /* drop the newest */
         if (!snap_restore(ring_newest())) { ring_clear(); macos_beep(); }
+        else { mods_assisted(); kid_alive = (int16_t)rd16(G_KID + CH_LIFE) > 0; }
         return;
     }
     if (mod[MOD_REWIND]) {

@@ -147,27 +147,53 @@ dist: app
 	ditto -c -k --keepParent "$(APP)" "$(ZIP)"
 	@echo "built $(ZIP)"
 
-# ---- Recalbox (Raspberry Pi 4/5): the Linux arm64 binary, built in Docker, and the files of
-# the port; unzip build/PoP2-Port-Recalbox-arm64.zip into /recalbox/share (packaging/recalbox)
-RBX := build/recalbox
-RBX_GAME := $(RBX)/roms/ports/Prince of Persia 2
-recalbox:
-	tools/build_linux.sh arm64
-	rm -rf $(RBX) build/PoP2-Port-Recalbox-arm64.zip
-	mkdir -p "$(RBX_GAME)/pop2" "$(RBX)/system/.emulationstation"
-	cp build/linux-arm64/pop2.stripped "$(RBX_GAME)/pop2/pop2"
-	cp packaging/recalbox/pop2.sh "$(RBX_GAME)/pop2/"
-	cp LICENSE "$(RBX_GAME)/pop2/LICENSE.txt"
-	cp third_party/spleen/LICENSE "$(RBX_GAME)/pop2/LICENSE-spleen-font.txt"
-	cp packaging/recalbox/gamelist.xml packaging/recalbox/_readme.txt "$(RBX_GAME)/"
-	cp packaging/recalbox/systemlist.xml "$(RBX)/system/.emulationstation/"
-	cd $(RBX) && zip -qr ../PoP2-Port-Recalbox-arm64.zip roms system
-	@echo "built build/PoP2-Port-Recalbox-arm64.zip"
+# ---- Linux packages (binaries built in Docker on Debian 11: tools/build_linux.sh)
+#   make recalbox     build/PoP2-Port-Recalbox-{arm64,x86_64}.zip   (unzip into /recalbox/share)
+#   make linux        build/PoP2-Port-Linux-{arm64,x86_64}.tar.gz   (desktop Linux)
+#   make portmaster   build/PoP2-Port-PortMaster.zip                (handhelds, aarch64 + x86_64)
+#   make packages     all of them
+LINUX_ARCHS := arm64 amd64
+linux-bins:
+	for a in $(LINUX_ARCHS); do tools/build_linux.sh $$a || exit 1; done
+
+recalbox: linux-bins
+	for a in $(LINUX_ARCHS); do \
+	  n=$$( [ $$a = amd64 ] && echo x86_64 || echo $$a ); d=build/recalbox-$$n; g="$$d/roms/ports/Prince of Persia 2"; \
+	  rm -rf $$d build/PoP2-Port-Recalbox-$$n.zip; mkdir -p "$$g/pop2" "$$d/system/.emulationstation"; \
+	  cp build/linux-$$a/pop2.stripped "$$g/pop2/pop2"; cp packaging/recalbox/pop2.sh "$$g/pop2/"; \
+	  cp LICENSE "$$g/pop2/LICENSE.txt"; cp third_party/spleen/LICENSE "$$g/pop2/LICENSE-spleen-font.txt"; \
+	  cp packaging/recalbox/gamelist.xml packaging/recalbox/_readme.txt "$$g/"; \
+	  cp packaging/recalbox/systemlist.xml "$$d/system/.emulationstation/"; \
+	  (cd $$d && zip -qr ../PoP2-Port-Recalbox-$$n.zip roms system) || exit 1; \
+	  echo "built build/PoP2-Port-Recalbox-$$n.zip"; done
+
+linux: linux-bins
+	for a in $(LINUX_ARCHS); do \
+	  n=$$( [ $$a = amd64 ] && echo x86_64 || echo $$a ); d=build/linux-pkg-$$n/pop2-port; \
+	  rm -rf build/linux-pkg-$$n; mkdir -p $$d; \
+	  cp build/linux-$$a/pop2.stripped $$d/pop2; cp packaging/linux/README.txt $$d/; \
+	  cp LICENSE $$d/LICENSE.txt; cp third_party/spleen/LICENSE $$d/LICENSE-spleen-font.txt; \
+	  tar -czf build/PoP2-Port-Linux-$$n.tar.gz -C build/linux-pkg-$$n pop2-port || exit 1; \
+	  echo "built build/PoP2-Port-Linux-$$n.tar.gz"; done
+
+portmaster: linux-bins
+	rm -rf build/portmaster build/PoP2-Port-PortMaster.zip
+	mkdir -p build/portmaster/pop2
+	cp build/linux-arm64/pop2.stripped build/portmaster/pop2/pop2.aarch64
+	cp build/linux-amd64/pop2.stripped build/portmaster/pop2/pop2.x86_64
+	cp "packaging/portmaster/Prince of Persia 2.sh" build/portmaster/
+	chmod 755 "build/portmaster/Prince of Persia 2.sh" build/portmaster/pop2/pop2.*
+	cp packaging/portmaster/port.json packaging/portmaster/gameinfo.xml packaging/portmaster/README.md build/portmaster/pop2/
+	cp LICENSE build/portmaster/pop2/LICENSE.txt; cp third_party/spleen/LICENSE build/portmaster/pop2/LICENSE-spleen-font.txt
+	cd build/portmaster && zip -qr ../PoP2-Port-PortMaster.zip "Prince of Persia 2.sh" pop2
+	@echo "built build/PoP2-Port-PortMaster.zip"
+
+packages: recalbox linux portmaster
 
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all clean check app dist recalbox
+.PHONY: all clean check app dist recalbox linux portmaster packages linux-bins
 
 # keep the rewritten sources (for reading compiler errors and debugging)
 .SECONDARY: $(patsubst src/game/%.c,$(BUILD)/nat/%.c,$(PORTED_SRC)) $(patsubst src/game/%.c,$(BUILD)/chk/%.c,$(PORTED_SRC))

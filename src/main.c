@@ -1,4 +1,4 @@
-/* Prince of Persia 2 for modern macOS — entry point. */
+/* Prince of Persia 2 native port — entry point. */
 #include "mac/mac.h"
 #include "fs/vfs.h"
 #include <stdio.h>
@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <unistd.h>
 #include <execinfo.h>
+#include <dirent.h>
+#include <strings.h>
 
 void traps_loader_init(void);
 void runtime_init_lowmem(void);
@@ -32,6 +34,35 @@ static void on_crash(int sig) {
     backtrace_symbols_fd(bt, n, 2);
     fflush(stderr);
     raise(sig);
+}
+
+/* No disk image given (Linux, handhelds): a disk image file in the current folder, next to
+ * the program or in the data folder, the first one that holds an HFS volume. */
+static const char *find_disk_image(void) {
+    static const char *const exts[] = { ".hfv", ".dsk", ".img", ".image", ".toast", ".iso", ".cdr", ".bin", ".hda", ".dc42" };
+    static char found[2048];
+    char dirs[3][1024] = { ".", "", "" };
+#ifdef __linux__
+    ssize_t n = readlink("/proc/self/exe", dirs[1], sizeof dirs[1] - 1);
+    if (n > 0) { dirs[1][n] = 0; char *s = strrchr(dirs[1], '/'); if (s) *s = 0; else dirs[1][0] = 0; }
+#endif
+    snprintf(dirs[2], sizeof dirs[2], "%s", macos_support_dir());
+    for (int d = 0; d < 3; d++) {
+        if (!dirs[d][0]) continue;
+        DIR *dir = opendir(dirs[d]);
+        if (!dir) continue;
+        struct dirent *e;
+        while ((e = readdir(dir))) {
+            const char *dot = strrchr(e->d_name, '.');
+            int ok = 0;
+            for (size_t k = 0; dot && k < sizeof exts / sizeof exts[0]; k++) ok |= !strcasecmp(dot, exts[k]);
+            if (!ok) continue;
+            snprintf(found, sizeof found, "%s/%s", dirs[d], e->d_name);
+            if (vfs_mount_hfs(found, NULL) == 0) { closedir(dir); fprintf(stderr, "disk image: %s\n", found); return found; }
+        }
+        closedir(dir);
+    }
+    return NULL;
 }
 
 static void on_term(int sig) {
@@ -60,9 +91,16 @@ int main(int argc, char **argv) {
      * command line, POP2_HFV, or (app / interactive use) the remembered or chosen file. */
     int asked = 0;
     if (!hfv) hfv = getenv("POP2_HFV");
+#ifdef __APPLE__
     if (!hfv && !headless) { hfv = macos_locate_disk_image(0); asked = 1; }
+#endif
+    if (!hfv) hfv = find_disk_image();
     if (!hfv) {
-        fprintf(stderr, "usage: pop2 [path/to/PoP2.hfv]\n  The game data is read from your own copy of the original disk image.\n");
+        fprintf(stderr, "usage: pop2 [path/to/disk image]\n"
+                        "  Prince of Persia 2 runs from your own copy of the original Macintosh game: the disk\n"
+                        "  image of its floppy, CD or hard disk (.hfv, .dsk, .img, .image, .toast, .iso, .bin).\n"
+                        "  Without a path, a disk image in this folder, next to the program or in\n"
+                        "  %s is used.\n", macos_support_dir());
         return 1;
     }
 

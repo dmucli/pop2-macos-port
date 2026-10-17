@@ -72,6 +72,7 @@ static int game_items(maddr h, GameItem *out, int max) {
 - (void)quickSave:(id)sender { (void)sender; mods_quick_save(); }
 - (void)quickLoad:(id)sender { (void)sender; mods_quick_load(); }
 - (void)saveStates:(id)sender { (void)sender; states_window(); }
+- (void)overlayMenu:(id)sender { (void)sender; overlay_menu_request(); }
 - (void)controls:(id)sender { (void)sender; controls_window(); }
 - (void)displayMode:(NSMenuItem *)item { platform_set_display_mode((int)item.tag); platform_menu_sync(); }
 /* Quit goes through the game's own Quit item when it has one (so it can save settings). */
@@ -198,6 +199,7 @@ void platform_menu_update(void) {
         NSMenuItem *cp = add(ex, mod_titles[MOD_SKIP_COPYPROT], @selector(toggleMod:), nil, 1);
         cp.tag = MOD_SKIP_COPYPROT; cp.state = mods_get(MOD_SKIP_COPYPROT) ? NSControlStateValueOn : NSControlStateValueOff;
         add(ex, @"Controls\u2026", @selector(controls:), nil, 1);
+        add(ex, [NSString stringWithFormat:@"On-Screen Menu (%s)", input_key_name(input_action_key(ACT_MENU))], @selector(overlayMenu:), nil, 1);
         [bar addItemWithTitle:@"Extras" action:NULL keyEquivalent:@""].submenu = ex;
 
         NSMenu *win = [[NSMenu alloc] initWithTitle:@"View"];   /* not "Window": AppKit would add its own items */

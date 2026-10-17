@@ -30,6 +30,7 @@ static const Action acts[ACT_COUNT] = {
     { "Quick load",                  "Keys.QuickLoad", "Pad.QuickLoad", -1, 0, 0x65, SDL_CONTROLLER_BUTTON_Y },
     { "Add 5 minutes",               "Keys.AddTime", "Pad.AddTime", -1, 0, -1, -1 },
     { "Add one health",              "Keys.AddHealth", "Pad.AddHealth", -1, 0, -1, -1 },
+    { "Extras menu (on screen)",     "Keys.Menu",    "Pad.Menu",    -1, 0, 0x7A, SDL_CONTROLLER_BUTTON_GUIDE },   /* F1 */
 };
 static int key_for[ACT_COUNT], pad_for[ACT_COUNT];
 
@@ -40,7 +41,7 @@ void input_load_keys(void) {
     const char *hk = getenv("POP2_HOTKEYS");
     for (int a = 0; a < ACT_COUNT; a++) {
         int paddef = acts[a].paddef;
-        if (hk && *hk == '1' && (a == ACT_QSAVE || a == ACT_QLOAD)) paddef = -1;   /* hotkey combos instead */
+        if (hk && *hk == '1' && (a == ACT_QSAVE || a == ACT_QLOAD || a == ACT_MENU)) paddef = -1;   /* hotkey combos instead */
         key_for[a] = macos_pref_int(acts[a].pref, acts[a].def);
         pad_for[a] = macos_pref_int(acts[a].padpref, paddef);
         if (pad_for[a] >= PAD_CODES) pad_for[a] = -1;
@@ -86,6 +87,7 @@ static void press(int a, int down, uint16_t mods, int repeat) {
         case ACT_QLOAD: if (down && !repeat) mods_quick_load(); return;   /* from the title too */
         case ACT_ADDTIME: if (down && !repeat && mods_playing()) mods_add_time(); return;
         case ACT_ADDHEALTH: if (down && !repeat && mods_playing()) mods_add_health(); return;
+        case ACT_MENU: if (down && !repeat) overlay_menu_request(); return;
     }
     event_key(down, (uint8_t)acts[a].key, acts[a].ch, mods, repeat);
 }
@@ -212,6 +214,7 @@ static void hotkey_combo(int b, int down) {
         case SDL_CONTROLLER_BUTTON_X: if (down) press(ACT_QLOAD, 1, 0, 0); break;
         case SDL_CONTROLLER_BUTTON_DPAD_LEFT: if (mods_playing() || !down) press(ACT_REWIND, down, 0, 0); break;
         case SDL_CONTROLLER_BUTTON_DPAD_UP: if (down) press(ACT_ADDHEALTH, 1, 0, 0); break;
+        case SDL_CONTROLLER_BUTTON_B: if (down) overlay_menu_request(); break;
         case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: if (down) press(ACT_ADDTIME, 1, 0, 0); break;
     }
 }
@@ -248,6 +251,14 @@ static int special_button(const SDL_Event *e) {
     }
     if (down && hk_held) { hk_combo = 1; swallowed[b] = 1; hotkey_combo(b, 1); return 1; }
     return 0;
+}
+
+void input_reset(void) {
+    memset(code_down, 0, sizeof code_down);
+    memset(swallowed, 0, sizeof swallowed);
+    if (pad_held & (1u << ACT_REWIND)) mods_set_rewind_held(0);
+    pad_held = 0;
+    hk_held = hk_combo = 0;
 }
 
 void input_controller_event(const SDL_Event *e) {
@@ -372,9 +383,12 @@ const char *input_pad_code_name(int c) {
         case SDL_CONTROLLER_TYPE_PS4: fam = PS; break;
         case SDL_CONTROLLER_TYPE_PS5: fam = PS; ps5 = 1; break;
         case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_PRO:
+#if SDL_VERSION_ATLEAST(2, 24, 0)
         case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_LEFT:
         case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_RIGHT:
-        case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_PAIR: fam = NINTENDO; break;
+        case SDL_CONTROLLER_TYPE_NINTENDO_SWITCH_JOYCON_PAIR:
+#endif
+            fam = NINTENDO; break;
         case SDL_CONTROLLER_TYPE_XBOXONE: xone = 1; break;
         default: break;
     }

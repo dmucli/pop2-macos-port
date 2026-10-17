@@ -14,7 +14,9 @@ data is included**: you need the HFS disk image of your own copy of the Macintos
    - `roms/ports/Prince of Persia 2/` (the program in `pop2/`, the game list, a readme)
    - `system/.emulationstation/systemlist.xml` (adds the system). **If that file already
      exists in your share, do not replace it**: add the `<system>` element of ours to it.
-3. Copy your disk image into `roms/ports/Prince of Persia 2/` and name it `PoP2.hfv`.
+3. Copy your disk image into `roms/ports/Prince of Persia 2/` (any name; `.hfv`, `.dsk`,
+   `.img`, `.image`, `.toast`, `.iso`, `.cdr` or `.bin`). Naming it `PoP2.hfv` gives it the
+   game's title and description in the list.
 4. Restart EmulationStation (or reboot). Prince of Persia 2 appears with the ports.
 
 ## Controls
@@ -26,6 +28,7 @@ data is included**: you need the HFS disk image of your own copy of the Macintos
 | B | second button |
 | Start | pause; on the title screen, start a game |
 | Select | show the time left |
+| Hotkey + B | on-screen menu: save states with pictures, go to level, add time / health, cheats, display, statistics |
 | Hotkey + Y | save state (the last 10 are kept) |
 | Hotkey + X | load the newest save state (from the title screen too) |
 | Hotkey + Left (hold) | rewind |
@@ -34,7 +37,8 @@ data is included**: you need the HFS disk image of your own copy of the Macintos
 | Hotkey + Start | quit |
 | in a dialog | A or Start: OK, B: Cancel |
 
-The pads are the ones configured in Recalbox (read from `es_input.cfg`).
+The pads are the ones configured in Recalbox (read from `es_input.cfg`). The Mac menu bar
+the game draws at the top of the screen is hidden (the on-screen menu can show it again).
 
 ## Files
 
@@ -53,8 +57,10 @@ Recalbox hotkeys, the pad mappings from `es_input.cfg`, and its files in `saves/
 ## Build
 
 ```sh
-make recalbox      # Docker: builds the arm64 binary on Debian 12, then build/PoP2-Port-Recalbox-arm64.zip
+make recalbox      # Docker: builds on Debian 11, then build/PoP2-Port-Recalbox-{arm64,x86_64}.zip
 ```
+
+The x86_64 package is for Recalbox on PC; the steps are the same.
 
 The Linux build plays exactly like the Mac one: scripted runs of the game end with the same
 emulated memory on both (macOS with the same fallback font, `-DPOP2_BUILTIN_FONT`).

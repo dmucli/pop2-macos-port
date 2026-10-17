@@ -5,7 +5,7 @@
 		<name>Prince of Persia 2: The Shadow and the Flame</name>
 		<desc>The 1993 Macintosh version, running natively (an unofficial port: the original program translated to C). Uses your own disk image of the game, named PoP2.hfv.
 
-Controls: d-pad or stick to move, A action (grab, strike, careful step), B second button, Start pause, Select time left. Hotkey + Y save state, Hotkey + X load the newest, Hotkey + Left rewind, Hotkey + Up one more health, Hotkey + Right 5 more minutes, Hotkey + Start quit.</desc>
+Controls: d-pad or stick to move, A action (grab, strike, careful step), B second button, Start pause, Select time left. Hotkey + B on-screen menu (save states with pictures, levels, cheats, statistics), Hotkey + Y save state, Hotkey + X load the newest, Hotkey + Left rewind, Hotkey + Up one more health, Hotkey + Right 5 more minutes, Hotkey + Start quit.</desc>
 		<releasedate>19931001T000000</releasedate>
 		<developer>Brøderbund</developer>
 		<publisher>Brøderbund</publisher>

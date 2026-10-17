@@ -5,7 +5,7 @@
      The command runs pop2/pop2.sh from the folder of the game file ($0 is the disk image). -->
 <systemList>
   <system uuid="0332ad8d-bb2d-54be-b637-f6c112121d6f" name="princeofpersia2" fullname="Prince of Persia 2">
-    <descriptor path="%ROOT%/ports/Prince of Persia 2" theme="princeofpersia" extensions=".hfv .HFV"
+    <descriptor path="%ROOT%/ports/Prince of Persia 2" theme="princeofpersia" extensions=".hfv .HFV .dsk .DSK .img .IMG .image .toast .iso .ISO .cdr .bin .BIN .hda .dc42"
                 extension.types="*=file" icon="$F2f2" downloader="0" port="1" readonly="0"
                 command="sh -c 'exec sh &quot;${0%/*}/pop2/pop2.sh&quot; &quot;$0&quot;' %ROM%"/>
     <scraper screenscraper="146"/>
@@ -14,7 +14,7 @@
                 crt.multiresolution="0" crt.multiregion="0" ignoredfiles=""/>
     <emulatorList>
       <emulator name="pop2">
-        <core name="pop2" priority="1" extensions=".hfv .HFV" netplay="0" softpatching="0"
+        <core name="pop2" priority="1" extensions=".hfv .HFV .dsk .DSK .img .IMG .image .toast .iso .ISO .cdr .bin .BIN .hda .dc42" netplay="0" softpatching="0"
               compatibility="high" speed="high" crt.available="0" video.backend="default"/>
       </emulator>
     </emulatorList>

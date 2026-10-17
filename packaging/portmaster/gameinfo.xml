@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<gameList>
+  <game>
+    <path>./Prince of Persia 2.sh</path>
+    <name>Prince of Persia 2</name>
+    <desc>The Shadow and the Flame, the 1993 Macintosh version, running natively (an unofficial port: the original program translated to C). Needs the disk image of your own copy, in ports/pop2.
+
+D-pad or stick move, A action, B second button, Start pause, Select time left. Hotkey + B: extras menu (save states with pictures, levels, cheats, statistics). Hotkey + Y save state, + X load, + Left rewind, + Up health, + Right time, + Start quit.</desc>
+    <releasedate>19931001T000000</releasedate>
+    <developer>Brøderbund</developer>
+    <publisher>Brøderbund</publisher>
+    <genre>Platform</genre>
+  </game>
+</gameList>

@@ -29,7 +29,7 @@ const char *macos_locate_disk_image(int force_ask) {
         NSOpenPanel *panel = [NSOpenPanel openPanel];
         panel.title = @"Choose your Prince of Persia 2 disk image";
         panel.message = @"Prince of Persia 2 runs from your own copy of the original Macintosh game. "
-                         "Choose its HFS disk image (for example PoP2.hfv).";
+                         "Choose its disk image (floppy, CD or hard disk: .hfv, .dsk, .img, .image, .toast, .iso, .bin).";
         panel.prompt = @"Use This Disk";
         panel.canChooseFiles = YES;
         panel.canChooseDirectories = NO;

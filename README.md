@@ -1,35 +1,60 @@
-# Prince of Persia 2 for modern macOS (unofficial port)
+# Prince of Persia 2 — native port
 
-A port of the 1993 Macintosh version of *Prince of Persia 2: The Shadow and the Flame*
-to current macOS. The original 68k program was decompiled with Ghidra and translated,
-function by function, into C (about 2,160 functions plus the SoundMusicSys music driver);
-a reimplementation of the classic Mac Toolbox (memory, resources, files, QuickDraw,
-windows, menus, events, sound) runs it on top of SDL.
-
-**No game data is included.** The app reads everything from your own copy of the original
-game: an HFS disk image of the Macintosh version (for example `PoP2.hfv`). On first launch
-it asks for that file and remembers it. Saved games and settings are written to
-`~/Library/Application Support/PoP2-port/disk`; the disk image is never modified.
+*Prince of Persia 2: The Shadow and the Flame*, the 1993 Macintosh version, running
+natively on **macOS, Linux, Recalbox and retro handhelds** (unofficial). The original 68k
+program was decompiled with Ghidra and translated, function by function, into C; a
+reimplementation of the classic Mac Toolbox runs it on top of SDL. Save states with
+pictures, rewind, an on-screen menu, statistics, game controllers.
 
 This is an unofficial fan project, not affiliated with or endorsed by the rights holders.
+**No game data is included**: you play from your own copy of the game.
 
-## Download
+## Start playing
 
-Get `PoP2-Port-macOS.zip` from the [Releases](../../releases) page (Apple Silicon Macs,
-macOS 12 or later), unzip it and move `PoP2 Port.app` to Applications.
+1. **Your game's disk image.** The disk image of your original Macintosh Prince of Persia 2
+   (floppy, CD or hard disk), in any common format: `.hfv`, `.dsk`, `.img`, `.image`
+   (Disk Copy), `.toast`, `.iso`, `.cdr`, `.bin` (MacBinary). See [the disk image](#the-disk-image).
+2. **Download** the package for your system from the [latest release](../../releases/latest):
 
-The app is not signed with an Apple Developer ID, so the first time macOS blocks it:
-open it once, then in System Settings > Privacy & Security click **Open Anyway** (or run
-`xattr -dr com.apple.quarantine "/Applications/PoP2 Port.app"`). It then asks for your
-disk image of the original game.
+   | System | File | Then |
+   | --- | --- | --- |
+   | Mac (Apple Silicon, macOS 12+) | `PoP2-Port-macOS.zip` | unzip, move *PoP2 Port* to Applications, open it and choose your disk image |
+   | Recalbox, Raspberry Pi 4/5 | `PoP2-Port-Recalbox-arm64.zip` | unzip into the Recalbox share, put the disk image in `roms/ports/Prince of Persia 2`, restart: see [Recalbox](packaging/recalbox/README.md) |
+   | Recalbox on a PC | `PoP2-Port-Recalbox-x86_64.zip` | same as above |
+   | Handhelds with PortMaster (ArkOS, ROCKNIX, muOS...) | `PoP2-Port-PortMaster.zip` | unzip into `ports/`, put the disk image in `ports/pop2`: see [PortMaster](packaging/portmaster/README.md) |
+   | Linux PC / Raspberry Pi desktop | `PoP2-Port-Linux-x86_64.tar.gz` / `-arm64` | extract, put the disk image next to `pop2`, run `./pop2` |
 
-### Recalbox and Linux
+3. **Play.** Start (or any key) on the title screen starts a game. F1, or Hotkey + B on
+   Recalbox and handhelds, opens the on-screen menu: save states, levels, extras, display.
 
-The port also builds for Linux (SDL2), and runs on Recalbox (Raspberry Pi 4/5) as a port
-system of its own, installed on the share partition: see
-[packaging/recalbox/README.md](packaging/recalbox/README.md) (`make recalbox` builds the
-package with Docker). Known issue: on Recalbox the game was reported to quit at the end of
-level 3; the log (`/recalbox/share/saves/pop2/pop2.log`) now records crashes and quits.
+The disk image is never modified: saved games, save states and settings go to a folder of
+their own (on a Mac `~/Library/Application Support/PoP2-port`).
+
+| | Keyboard | Controller |
+| --- | --- | --- |
+| move | arrows | d-pad / left stick |
+| action (grab, strike, careful step) | Shift | A |
+| second button | Control | B |
+| pause / time left | Esc / Space | Start / Select |
+| save state / load the newest | F5 / F9 | Hotkey + Y / X (Recalbox, handhelds) |
+| rewind (hold) | Delete | Hotkey + Left |
+| on-screen menu | F1 | Guide, or Hotkey + B |
+
+On a Mac, if macOS says it cannot check the app: open it once, then System Settings >
+Privacy & Security > **Open Anyway**.
+
+### The disk image
+
+The port reads the game from a disk image of the original: the files of the Macintosh
+version (the *Prince of Persia 2* application and its *Data* folder) on an HFS disk.
+- **From the CD**: on a Mac, Disk Utility > File > New Image > Image from the CD, format
+  *DVD/CD master* (a `.cdr` file); on Linux, `dd if=/dev/cdrom of=pop2.iso`.
+- **An emulator disk** (Basilisk II, SheepShaver, Mini vMac) with the game installed: use
+  that disk file (`.hfv`, `.dsk`, `.img`) as is.
+- **Disk Copy images** of the floppies and **MacBinary** downloads of your own copy work
+  as they are.
+
+Whatever its name, the port finds the game on the disk.
 
 ## Extras
 
@@ -48,6 +73,9 @@ Additions of this port, outside the original game (they are off in the verificat
 | Extras > Save States... | the last 10 save states with a picture, the level, the time left and the date; click a name to rename it; Load, Delete. They are kept in `~/Library/Application Support/PoP2-port/Save States` |
 | hold Delete | rewind (about 15 seconds; Extras > Rewind turns it off) |
 | Extras > Skip Copy Protection | on by default: the manual question is never asked (as ScummVM does for games of that era) |
+| F1 (or a controller's Guide button) | on-screen menu, for controllers and keyboards: save states with pictures, go to level, add time / health, cheats, display, Mac menu bar, statistics |
+| Statistics | per level: best time of a clean run (no extras, save state, rewind or cheat), completions, deaths; all time and this session |
+| Messages | "State saved", "State loaded", health, rewind indicator: drawn over the picture, never into the game |
 | Extras > Controls... | choose the keys and the game controller buttons; shows the connected controller with its own button names (Xbox, PlayStation, Switch). Controller defaults: d-pad or left stick move, A action, B second button, Start pause, Back time left, left shoulder rewind, right shoulder / Y quick save / load |
 | View | Pixels, Sharp Pixels (whole multiples), Smooth, CRT Scanlines |
 
@@ -64,6 +92,9 @@ make app BUILD=build/release CORE=mini     # build/release/PoP2 Port.app (no 68k
 # release: Developer ID signature, notarization (credentials from `xcrun notarytool
 # store-credentials notary`), zip in build/release/PoP2-Port-macOS.zip
 make dist BUILD=build/release CORE=mini SIGN_ID="Developer ID Application: ..."
+make packages          # Linux packages (Docker): Recalbox, desktop tarballs, PortMaster
+tools/crosscheck.sh arm64 amd64   # scripted runs: same emulated memory on macOS and Linux
+tools/release.sh 0.3   # all of the above, then a draft GitHub release with every package
 ```
 
 Development builds keep the Musashi 68k emulator (MIT licence, `third_party/musashi`),

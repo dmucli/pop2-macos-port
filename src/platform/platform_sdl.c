@@ -58,6 +58,32 @@ int platform_init(int scale) {
     return 0;
 }
 void platform_shutdown(void) { if (!headless) SDL_Quit(); }
+SDL_Renderer *platform_renderer(void) { return headless ? NULL : ren; }
+
+/* The Mac menu bar the game draws at the top of the screen, hidden on request (it is
+ * covered in the picture only: the game's memory is unchanged). */
+int wm_menubar_visible(void);
+static int menubar_hidden = -1;
+int platform_menubar_hidden(void) {
+    if (menubar_hidden < 0) {
+        const char *e = getenv("POP2_HIDE_MENUBAR");
+        menubar_hidden = macos_pref_int("Display.HideMenuBar", e && *e == '1');
+    }
+    return menubar_hidden;
+}
+void platform_set_menubar_hidden(int h) { menubar_hidden = h; macos_pref_set_int("Display.HideMenuBar", h); }
+
+/* the last picture (no update from the game's screen), the menu bar mask */
+void platform_render_game(void) {
+    SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
+    SDL_RenderClear(ren);
+    SDL_RenderCopy(ren, display_mode == DISPLAY_CRT && crt_tex ? crt_tex : tex, NULL, NULL);
+    if (platform_menubar_hidden() && wm_menubar_visible()) {
+        SDL_Rect bar = { 0, 0, qd_screen_w, 20 };
+        SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
+        SDL_RenderFillRect(ren, &bar);
+    }
+}
 int  platform_is_headless(void) { return headless; }
 
 void platform_present(void) {
@@ -95,9 +121,8 @@ void platform_present(void) {
         }
         SDL_UnlockTexture(tex);
     }
-    SDL_SetRenderDrawColor(ren, 0, 0, 0, 255);
-    SDL_RenderClear(ren);
-    SDL_RenderCopy(ren, display_mode == DISPLAY_CRT && crt_tex ? crt_tex : tex, NULL, NULL);
+    platform_render_game();
+    overlay_draw();
     SDL_RenderPresent(ren);
 }
 
@@ -127,7 +152,7 @@ void platform_present_if_due(void) {
     if (now - last_present_ms < 16) return;
     /* present when QuickDraw changed the screen or the colour table; the game may also write
      * pixels directly (GetPixBaseAddr), so refresh at least every 100 ms regardless */
-    if (qd_screen_dirty == last_dirty && qd_clut_version == last_clut && now - last_present_ms < 100) return;
+    if (qd_screen_dirty == last_dirty && qd_clut_version == last_clut && now - last_present_ms < (overlay_visible() ? 33 : 100)) return;
     last_present_ms = now;
     { extern uint32_t frames_changed; if (qd_screen_dirty != last_dirty) frames_changed++; }   /* stats */
     last_dirty = qd_screen_dirty;
@@ -253,6 +278,7 @@ void platform_poll(void) {
                 break;
         }
     }
+    if (overlay_menu_pending()) overlay_menu_run();
 }
 
 void platform_set_cursor_visible(int v) {
