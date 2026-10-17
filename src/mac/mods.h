@@ -12,8 +12,8 @@ void mods_frame(void);
 void mods_level_start(void);
 void mods_level_end(void);
 void mods_set_rewind_held(int held);
-void mods_quick_save(int n);
-void mods_quick_load(int n);
-int  mods_slot_used(int n);
-int  mods_playing(void);
+void mods_quick_save(void);         /* a new save state in the history (states.h) */
+void mods_quick_load(void);         /* the newest save state */
+int  mods_playing(void);            /* a level is being played (not the attract mode's) */
+int  mods_in_level(void);           /* a level's frame loop is running, attract mode included */
 #endif

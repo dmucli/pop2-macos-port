@@ -4,7 +4,7 @@ SDL_CF  := $(shell sdl2-config --cflags)
 SDL_LD  := $(shell sdl2-config --libs)
 CFLAGS  ?= -O2 -g
 CFLAGS  += -std=c11 -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare -Isrc -Ithird_party/musashi $(SDL_CF)
-LDFLAGS += $(SDL_LD) -framework CoreText -framework CoreGraphics -framework CoreFoundation -framework Cocoa
+LDFLAGS += $(SDL_LD) -lz -framework CoreText -framework CoreGraphics -framework CoreFoundation -framework Cocoa
 BUILD   := build
 
 MUSASHI := third_party/musashi

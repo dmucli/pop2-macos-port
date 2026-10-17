@@ -5,10 +5,12 @@
  * runs (tools/check.sh, tools/equiv.sh), so the verification of the port is unaffected.
  *
  * Save states are taken at the start of a game frame (the call of the one-frame function
- * from the level's frame loop): at that point the native call chain is always the same
- * within one level, so restoring the emulated memory, the CPU registers and the runtime's
- * host-side state brings the game back exactly. They are therefore only valid within the
- * level being played (a new level clears them). */
+ * from the level's frame loop). Play is always reached through the same native call chain
+ * (ResetGame, Start, RestartGame, the frame loop), none of which keeps a C local alive
+ * across the frame call, so restoring the emulated memory, the CPU registers and the
+ * runtime's host-side state brings the game back exactly, in any level and in a later run
+ * (the stack depth and the host state's layout are checked). Saved states go to disk with
+ * a history (states.c); the rewind ring stays in memory. */
 #include "mac.h"
 #include "../cpu/cpu.h"
 #include <stdio.h>
@@ -18,6 +20,7 @@
 extern maddr g_a5;
 extern int runtime_deterministic;
 #include "../platform/platform.h"
+#include "states.h"
 void event_menu_command_key(uint8_t ch);
 void event_clear_queue(void);
 extern uint32_t qd_screen_dirty, qd_clut_version;
@@ -80,6 +83,7 @@ void mods_next_level(void) {
 #define G_NEXT_LEVEL     A5(-0x4f92)    /* word: the level to go to (== level while playing it) */
 uint32_t nat_ResetSoundItem(int16_t p4);
 static int want_level, in_level;   /* in_level: a level's frame loop is running */
+static void selftest_title_load(void);
 void mods_goto_level(int level) {
     if (!mods_playing() || level < 1 || level > 14) { macos_beep(); return; }
     want_level = level;
@@ -91,10 +95,22 @@ int mods_current_level(void) { return mods_playing() ? (int16_t)rd16(G_LEVEL) : 
  * with the option on, the flag is set as soon as the game has initialised its globals. */
 void mods_tick(void) {
     load_prefs();
+    selftest_title_load();
     if (!mod[MOD_SKIP_COPYPROT] || !active()) return;
     extern uint64_t runtime_us(void);
     if (runtime_us() < 2000000) return;   /* after the THINK C start-up has set up the globals */
     if (rd16(G_COPY_OK) != 1) wr16(G_COPY_OK, 1);
+}
+
+/* debug (POP2_MODS_SELFTEST=6): load the newest save state from the title screen */
+static void selftest_title_load(void) {
+    static int done;
+    const char *t = getenv("POP2_MODS_SELFTEST");
+    extern uint64_t runtime_us(void);
+    if (done || !t || *t != '6' || !active() || runtime_us() < 20000000) return;
+    done = 1;
+    fprintf(stderr, "[mods] at the title (in level %d), loading the newest state (%d on disk)\n", in_level, states_count());
+    states_request_load(0);
 }
 
 /* ---- save states ---- */
@@ -104,9 +120,8 @@ typedef struct Pg { int refs; uint8_t d[PG]; } Pg;
 typedef struct Snap { int used; uint64_t level; Pg **pg; uint8_t *host; size_t host_len; } Snap;
 #define RING 150                          /* frames of rewind (~15 s at the game's ~10 fps) */
 static Snap ring[RING]; static int ring_head, ring_count;
-static Snap slot[3];
 static uint64_t level_id = 1;
-static int rewind_held, want_save = -1, want_load = -1;
+static int rewind_held, want_save;
 
 static void snap_free(Snap *s) {
     if (!s->used) return;
@@ -134,30 +149,34 @@ static void *region(int i, size_t *n) {
 #define NREGIONS 6
 #define NREGS 17                          /* D0-D7, A0-A7, SR */
 
-static size_t host_size(void) {
-    size_t len = NREGS * 4 + time_state_size() + rsrc_state_size();
+/* the host-side state: the core (registers, runtime tables, timers), then the resource
+ * references (in-memory states only: states on disk keep those by file, see states.c) */
+static size_t core_size(void) {
+    size_t len = NREGS * 4 + time_state_size();
     for (int i = 0; i < NREGIONS; i++) { size_t n; region(i, &n); len += n; }
     return len;
 }
-static void host_save(Snap *s) {
-    s->host_len = host_size();
-    s->host = malloc(s->host_len);
-    uint8_t *o = s->host;
+static size_t host_size(void) { return core_size() + rsrc_state_size(); }
+static void core_fill(uint8_t *o) {
     for (int r = 0; r < 16; r++) { put32(o, cpu_get(r)); o += 4; }
     put32(o, cpu_get(R_SR)); o += 4;
     for (int i = 0; i < NREGIONS; i++) { size_t n; void *p = region(i, &n); memcpy(o, p, n); o += n; }
-    time_state_save(o); o += time_state_size();
-    rsrc_state_save(o);
+    time_state_save(o);
 }
-static void host_load(const Snap *s) {
-    const uint8_t *in = s->host;
+static void host_fill(uint8_t *o) { core_fill(o); rsrc_state_save(o + core_size()); }
+static void host_save(Snap *s) {
+    s->host_len = host_size();
+    s->host = malloc(s->host_len);
+    host_fill(s->host);
+}
+static void core_load(const uint8_t *in) {
     for (int r = 0; r < 16; r++) cpu_set(r, be32(in + 4 * r));
     cpu_set(R_SR, be32(in + 64));
     in += NREGS * 4;
     for (int i = 0; i < NREGIONS; i++) { size_t n; void *p = region(i, &n); memcpy(p, in, n); in += n; }
-    time_state_load(in); in += time_state_size();
-    rsrc_state_load(in);
+    time_state_load(in);
 }
+static void host_load(const uint8_t *in) { core_load(in); rsrc_state_load(in + core_size()); }
 
 static void snap_take(Snap *s, const Snap *base) {
     s->used = 1; s->level = level_id;
@@ -169,32 +188,68 @@ static void snap_take(Snap *s, const Snap *base) {
     }
     host_save(s);
 }
-static int snap_restore(const Snap *s) {
-    /* same level, same point of the frame loop, same set of resources: else refuse */
-    if (!s->used || s->level != level_id) return 0;
-    if (be32(s->host + 15 * 4) != cpu_get(R_SP) || s->host_len != host_size()) return 0;
-    uint8_t keys[16];
-    memcpy(keys, M + LM_KeyMap, 16);                    /* the keys held now stay held */
-    for (unsigned p = 0; p < NPG; p++) memcpy(M + (size_t)p * PG, s->pg[p]->d, PG);
-    memcpy(M + LM_KeyMap, keys, 16);
-    host_load(s);
+/* same point of the frame loop (stack depth), same set of resources: else refuse */
+static int restorable(const uint8_t *host, size_t len) {
+    return len == host_size() && be32(host + 15 * 4) == cpu_get(R_SP);
+}
+static void restore_done(const uint8_t *keys) {
+    memcpy(M + LM_KeyMap, keys, 16);                    /* the keys held now stay held */
     event_clear_queue();
     qd_screen_dirty++; qd_clut_version++;               /* redraw with the restored colours */
+}
+static int snap_restore(const Snap *s) {
+    if (!s->used || s->level != level_id || !restorable(s->host, s->host_len)) return 0;
+    uint8_t keys[16];
+    memcpy(keys, M + LM_KeyMap, 16);
+    for (unsigned p = 0; p < NPG; p++) memcpy(M + (size_t)p * PG, s->pg[p]->d, PG);
+    host_load(s->host);
+    restore_done(keys);
     return 1;
 }
 
+/* for states.c: the core host-side state, and a restore from a flat memory image (the
+ * caller then restores the resource references and open files its own way) */
+uint8_t *mods_core_blob(size_t *len) {
+    *len = core_size();
+    uint8_t *b = malloc(*len);
+    core_fill(b);
+    return b;
+}
+int mods_core_restorable(const uint8_t *core, size_t len) {
+    return len == core_size() && be32(core + 15 * 4) == cpu_get(R_SP);
+}
+void mods_restore_flat(const uint8_t *mem, const uint8_t *core) {
+    uint8_t keys[16];
+    memcpy(keys, M + LM_KeyMap, 16);
+    memcpy(M, mem, MEM_SIZE);
+    core_load(core);
+    restore_done(keys);
+}
+int mods_minutes_left(void) { return (int16_t)rd16(G_MINUTES_LEFT); }
+
 void mods_set_rewind_held(int held) { rewind_held = held; }
-void mods_quick_save(int n) { if (n >= 0 && n < 3) want_save = n; }
-void mods_quick_load(int n) { if (n >= 0 && n < 3) want_load = n; }
-int  mods_slot_used(int n) { return n >= 0 && n < 3 && slot[n].used && slot[n].level == level_id; }
+void mods_quick_save(void) { if (mods_playing()) want_save = 1; else macos_beep(); }
+void mods_quick_load(void) { if (states_count() > 0) states_request_load(0); else macos_beep(); }
 
 /* the level's frame loop starts: save states from another level are no longer valid */
 void mods_level_start(void) { in_level = 1; level_id++; ring_clear(); saved_minutes = -1; }
 
 /* a level is being played: its frame loop is running (menus pause the game, so this is
  * not a matter of time since the last frame) */
-int mods_playing(void) { return active() && in_level; }
+#define G_DEMO           A5(-0x4ffe)    /* word: a recorded game is playing (attract mode) */
+int mods_playing(void) { return active() && in_level && rd16(G_DEMO) == 0; }
+int mods_in_level(void) { return active() && in_level; }
 void mods_level_end(void) { in_level = 0; want_level = 0; }
+
+/* debug: the whole emulated memory but the keys held (FNV-1a) */
+static uint64_t mem_hash(void) {
+    uint64_t h = 1469598103934665603ull;
+    for (uint32_t i = 0; i < MEM_SIZE; i++) {
+        if (i - LM_KeyMap < 16) continue;
+        h = (h ^ M[i]) * 1099511628211ull;
+    }
+    return h;
+}
 
 /* start of a game frame */
 void mods_frame(void) {
@@ -238,8 +293,40 @@ void mods_frame(void) {
             if (frame_no == 60) { fprintf(stderr, "[mods] next level\n"); mods_next_level(); }
             goto selftest_done;
         }
-        if (frame_no == 30) { want_save = 0; sum_at_save = sum; kid_at_save = rd32(G_KID + 2); }
-        if (frame_no == 90) want_load = 0;
+        char t = *getenv("POP2_MODS_SELFTEST");
+        if (t == '4' || t == '5' || t == '6') {   /* save states across levels (4) and across runs (5: loads the newest) */
+            static int lv_frames, phase, saved_level;
+            lv_frames++;
+            int lv = (int16_t)rd16(G_LEVEL);
+            if (t == '4' && phase == 0 && frame_no == 30) {
+                want_save = 1; sum_at_save = sum; kid_at_save = rd32(G_KID + 2); saved_level = lv;
+                fprintf(stderr, "[mods] save in level %d sum %08x\n", lv, sum);
+                phase = 1;
+            } else if (t == '4' && phase == 1 && frame_no == 40) {
+                fprintf(stderr, "[mods] going to level %d\n", lv + 1);
+                mods_goto_level(lv + 1); phase = 2; lv_frames = -100000;
+            } else if (t == '4' && phase == 2 && lv == saved_level + 1 && lv_frames < 0) lv_frames = 0;
+            else if (t == '4' && phase == 2 && lv_frames == 30) {
+                fprintf(stderr, "[mods] in level %d, loading the state\n", lv);
+                states_request_load(0); phase = 3; lv_frames = 0;
+            } else if (t == '5' && phase == 0 && frame_no == 30) {
+                fprintf(stderr, "[mods] in level %d, loading the newest state (%d on disk)\n", lv, states_count());
+                states_request_load(0); phase = 3; lv_frames = 0;
+            } else if (t == '6' && phase == 0) {
+                fprintf(stderr, "[mods] first frame of play in level %d\n", lv);
+                phase = 3; lv_frames = 0;
+            } else if (phase == 3 && lv_frames == 1) {
+                fprintf(stderr, "[mods] after load: level %d sum %08x%s, kid %s\n", lv, sum,
+                        t == '4' ? (sum == sum_at_save ? " (same)" : " (DIFFERENT)") : "",
+                        t == '4' ? (rd32(G_KID + 2) == kid_at_save ? "same" : "DIFFERENT") : "-");
+                phase = 4;
+            } else if (phase == 4 && lv_frames % 50 == 0)
+                fprintf(stderr, "[mods] frame %d after load: level %d, kid at %08x, life %d, minutes %d\n", lv_frames, lv,
+                        rd32(G_KID + 2), (int16_t)rd16(G_KID + CH_LIFE), (int16_t)rd16(G_MINUTES_LEFT));
+            goto selftest_done;
+        }
+        if (frame_no == 30) { want_save = 1; sum_at_save = sum; kid_at_save = rd32(G_KID + 2); }
+        if (frame_no == 90) states_request_load(0);
         if (frame_no == 91) fprintf(stderr, "[mods] after load: globals %s, kid %s\n",
                                     sum == sum_at_save ? "same" : "DIFFERENT", rd32(G_KID + 2) == kid_at_save ? "same" : "DIFFERENT");
         if (frame_no == 150) rewind_held = 1;
@@ -255,16 +342,16 @@ void mods_frame(void) {
         }
         return;
     }
-    if (want_load >= 0) {
-        int n = want_load; want_load = -1;
-        if (!snap_restore(&slot[n])) macos_beep();
+    if (states_load_pending()) {
+        if (!states_load_now()) macos_beep();
         else ring_clear();
+        if (selftest) fprintf(stderr, "[mods] memory hash after load %016llx\n", (unsigned long long)mem_hash());
         return;
     }
-    if (want_save >= 0) {
-        int n = want_save; want_save = -1;
-        snap_free(&slot[n]);
-        snap_take(&slot[n], ring_newest());
+    if (want_save) {
+        want_save = 0;
+        if (selftest) fprintf(stderr, "[mods] memory hash at save %016llx\n", (unsigned long long)mem_hash());
+        if (rd16(G_DEMO) == 0) states_save_now(mods_current_level(), mods_minutes_left());
     }
     if (rewind_held && mod[MOD_REWIND]) {
         if (ring_count <= 1) return;                     /* nothing older */

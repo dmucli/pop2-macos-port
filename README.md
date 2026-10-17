@@ -34,10 +34,11 @@ Additions of this port, outside the original game (they are off in the verificat
 | Extras > Cheat Mode | the game's own debug mode (as when 1 2 3 are held at launch): `-`/`+` change the time, Command-L next level on any level; the letter keys no longer move |
 | Extras > Skip to Next Level (Option-Command-N) | turns on Cheat Mode and uses the game's Command-L |
 | Extras > Go to Level | jump to any level 1-14 while playing |
-| F5 / F9 (Option-Command-S / -L) | quick save / quick load, within the level being played |
+| F5 / F9 (Option-Command-S / -L) | save state / load the newest one (keys can be changed in Extras > Controls). A state can be loaded in any level, after a restart too, and from the title screen (a game is started first) |
+| Extras > Save States... | the last 10 save states with a picture, the level, the time left and the date; click a name to rename it; Load, Delete. They are kept in `~/Library/Application Support/PoP2-port/Save States` |
 | hold Delete | rewind (about 15 seconds; Extras > Rewind turns it off) |
 | Extras > Skip Copy Protection | on by default: the manual question is never asked (as ScummVM does for games of that era) |
-| Extras > Controls... | choose the keys; game controllers work too (d-pad/stick, A action, B second button, Start pause, left shoulder rewind, right shoulder / Y quick save / load) |
+| Extras > Controls... | choose the keys and the game controller buttons; shows the connected controller with its own button names (Xbox, PlayStation, Switch). Controller defaults: d-pad or left stick move, A action, B second button, Start pause, Back time left, left shoulder rewind, right shoulder / Y quick save / load |
 | View | Pixels, Sharp Pixels (whole multiples), Smooth, CRT Scanlines |
 
 Game keys: arrows (or keypad) move, Shift or keypad `.` is the action button (grab,

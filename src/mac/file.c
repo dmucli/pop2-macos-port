@@ -502,6 +502,33 @@ int16_t PBGetFCBInfo(maddr pb, int async) {
 int fm_close_all(void) { for (int i = 0; i < MAX_FCB; i++) if (fcbs[i].used) { vfs_flush(fcbs[i].node); fcbs[i].used = 0; } return 0; }
 
 /* save states (src/mac/mods.c): open files, working directories, default directory */
+/* Open files for save states written to disk: the file by its parent and name instead of
+ * its host node, so a state can be loaded in a later run. */
+#define FCB_REC 44
+size_t file_fcbs_size(void) { return MAX_FCB * FCB_REC; }
+void file_fcbs_save(uint8_t *o) {
+    memset(o, 0, MAX_FCB * FCB_REC);
+    for (int i = 0; i < MAX_FCB; i++, o += FCB_REC) {
+        Fcb *f = &fcbs[i];
+        if (!f->used || !f->node) continue;
+        o[0] = 1; o[1] = (uint8_t)f->fork; o[2] = (uint8_t)f->perm;
+        put32(o + 4, f->pos); put32(o + 8, f->node->parid);
+        memcpy(o + 12, f->node->name, 32);
+    }
+}
+int file_fcbs_load(const uint8_t *in, int apply) {   /* apply 0: only check */
+    Fcb t[MAX_FCB] = {{0}};
+    for (int i = 0; i < MAX_FCB; i++, in += FCB_REC) {
+        if (!in[0]) continue;
+        char name[33]; memcpy(name, in + 12, 32); name[32] = 0;
+        VNode *n = vfs_lookup(be32(in + 8), name);
+        if (!n) return 0;                              /* the file is gone: refuse */
+        t[i] = (Fcb){ n, in[1], be32(in + 4), (int8_t)in[2], 1 };
+    }
+    if (apply) memcpy(fcbs, t, sizeof fcbs);
+    return 1;
+}
+
 void *file_state(int i, size_t *n) {
     switch (i) {
         case 0: *n = sizeof fcbs; return fcbs;

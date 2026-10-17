@@ -465,3 +465,98 @@ int rsrc_state_load(const uint8_t *in) {
     RsCur c = { (uint8_t *)in + 4 }; rsrc_walk(restore_ref, &c);
     return 1;
 }
+
+/* Save states on disk (src/mac/states.c): the open resource files, by file, and for each
+ * resource (by type and ID) its handle and attributes. Loading reconciles the open files
+ * with the state's (opening or closing files; the emulated memory is replaced wholesale, so
+ * nothing is disposed) and then sets the handles. */
+enum { PF_FILE = 44, PF_REF = 11 };
+static size_t file_refs(ResFile *f) { size_t n = 0; for (int t = 0; t < f->ntypes; t++) n += f->types[t].nrefs; return n; }
+size_t rsrc_portable_size(void) {
+    size_t len = 4;
+    for (ResFile *f = chain; f; f = f->next) len += PF_FILE + file_refs(f) * PF_REF;
+    return len;
+}
+void rsrc_portable_save(uint8_t *o) {
+    uint8_t *start = o;
+    o += 4;
+    uint32_t nf = 0;
+    for (ResFile *f = chain; f; f = f->next, nf++) {
+        memset(o, 0, PF_FILE);
+        put16(o, (uint16_t)f->refnum); put16(o + 2, f->attrs);
+        o[4] = f == sysfile;
+        if (f != sysfile) { put32(o + 8, f->node->parid); memcpy(o + 12, f->node->name, 32); }
+        put32(o + 40, (uint32_t)file_refs(f));
+        o += PF_FILE;
+        for (int t = 0; t < f->ntypes; t++)
+            for (int k = 0; k < f->types[t].nrefs; k++, o += PF_REF) {
+                Ref *r = &f->types[t].refs[k];
+                put32(o, f->types[t].type); put16(o + 4, (uint16_t)r->id); put32(o + 6, r->handle); o[10] = r->attrs;
+            }
+    }
+    put32(start, nf);
+}
+static VNode *pf_node(const uint8_t *rec) {
+    char name[33]; memcpy(name, rec + 12, 32); name[32] = 0;
+    VNode *n = vfs_lookup(be32(rec + 8), name);
+    return n && n->forklen[1] ? n : NULL;
+}
+static void drop_file(ResFile *f) {            /* host side only: handles and FCB belong to the state */
+    if (f->changed) write_file(f);
+    for (int i = 0; i < f->ntypes; i++) {
+        for (int j = 0; j < f->types[i].nrefs; j++) free(f->types[i].refs[j].data);
+        free(f->types[i].refs);
+    }
+    free(f->types);
+    free(f);
+}
+int rsrc_portable_load(const uint8_t *in, size_t len, int apply) {   /* apply 0: only check */
+    if (len < 4) return 0;
+    uint32_t nf = be32(in);
+    if (nf == 0 || nf > 64) return 0;
+    const uint8_t *p = in + 4, *end = in + len;
+    for (uint32_t i = 0; i < nf; i++) {
+        if (p + PF_FILE > end) return 0;
+        uint32_t nr = be32(p + 40);
+        if (!p[4] && !pf_node(p)) return 0;      /* the file is gone */
+        p += PF_FILE + (size_t)nr * PF_REF;
+        if (p > end) return 0;
+    }
+    if (!apply) return 1;
+    ResFile *files[64];
+    p = in + 4;
+    for (uint32_t i = 0; i < nf; i++) {
+        ResFile *f = NULL;
+        if (p[4]) f = sysfile;
+        else {
+            VNode *n = pf_node(p);
+            for (ResFile **pp = &chain; *pp; pp = &(*pp)->next)
+                if ((*pp)->node == n && *pp != sysfile) { f = *pp; *pp = f->next; break; }
+            if (!f) {
+                f = calloc(1, sizeof *f);
+                f->node = n;
+                parse_map(f, n->fork[1], n->forklen[1]);
+            }
+        }
+        if (f == sysfile) { for (ResFile **pp = &chain; *pp; pp = &(*pp)->next) if (*pp == f) { *pp = f->next; break; } }
+        f->refnum = (int16_t)be16(p);
+        f->attrs = be16(p + 2);
+        files[i] = f;
+        p += PF_FILE + (size_t)be32(p + 40) * PF_REF;
+    }
+    while (chain) { ResFile *f = chain; chain = f->next; if (f != sysfile) drop_file(f); }   /* not in the state */
+    for (int i = (int)nf - 1; i >= 0; i--) { files[i]->next = chain; chain = files[i]; }
+    p = in + 4;
+    for (uint32_t i = 0; i < nf; i++) {
+        ResFile *f = files[i];
+        for (int t = 0; t < f->ntypes; t++) for (int k = 0; k < f->types[t].nrefs; k++) f->types[t].refs[k].handle = 0;
+        uint32_t nr = be32(p + 40);
+        p += PF_FILE;
+        for (uint32_t k = 0; k < nr; k++, p += PF_REF) {
+            Ref *r = find_ref(f, be32(p), (int16_t)be16(p + 4));
+            if (r) { r->handle = be32(p + 6); r->attrs = p[10]; }
+        }
+    }
+    { extern void font_flush_cache(void); font_flush_cache(); }
+    return 1;
+}
