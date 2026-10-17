@@ -96,7 +96,19 @@ check: $(BUILD)/pop2check
 
 # ---- macOS app bundle (no game data inside: it asks for the user's own disk image)
 #   make app BUILD=build/release CORE=mini   (release build: no 68k emulator, no debug hook)
+#   make dist BUILD=build/release CORE=mini SIGN_ID="Developer ID Application: ..." NOTARY_PROFILE=notary
+#     signs with the hardened runtime, notarizes (xcrun notarytool, credentials stored with
+#     `xcrun notarytool store-credentials`), staples, and zips $(BUILD)/PoP2-Port-macOS.zip.
+#     Without SIGN_ID the app is signed ad hoc and not notarized.
 APP := $(BUILD)/PoP2 Port.app
+SIGN_ID ?= -
+NOTARY_PROFILE ?= notary
+ZIP := $(BUILD)/PoP2-Port-macOS.zip
+ifeq ($(SIGN_ID),-)
+SIGN_FLAGS := --force -s -
+else
+SIGN_FLAGS := --force --options runtime --timestamp -s "$(SIGN_ID)"
+endif
 SDL3_LIBDIR ?= $(shell (command -v pkg-config >/dev/null && pkg-config --variable=libdir sdl3) 2>/dev/null || echo /opt/homebrew/opt/sdl3/lib)
 app: $(BUILD)/pop2 packaging/Info.plist
 	rm -rf "$(APP)"
@@ -112,13 +124,25 @@ app: $(BUILD)/pop2 packaging/Info.plist
 	    SDL3="$(SDL3_LIBDIR)/libSDL3.dylib"; [ -f "$$SDL3" ] || { echo "sdl2-compat needs SDL3: $$SDL3 not found (set SDL3_LIBDIR)"; exit 1; }; \
 	    cp -L "$$SDL3" "$(APP)/Contents/Frameworks/libSDL3.dylib"; chmod u+w "$(APP)/Contents/Frameworks/libSDL3.dylib"; \
 	    install_name_tool -id "@loader_path/libSDL3.dylib" "$(APP)/Contents/Frameworks/libSDL3.dylib"; fi
-	codesign --force --deep -s - "$(APP)"
+	codesign $(SIGN_FLAGS) "$(APP)/Contents/Frameworks/"*.dylib
+	codesign $(SIGN_FLAGS) "$(APP)"
+	codesign --verify --strict --deep "$(APP)"
 	@echo "built $(APP)"
+
+dist: app
+	rm -f "$(ZIP)"
+	if [ "$(SIGN_ID)" != "-" ]; then \
+	  ditto -c -k --keepParent "$(APP)" "$(ZIP)" && \
+	  xcrun notarytool submit "$(ZIP)" --keychain-profile "$(NOTARY_PROFILE)" --wait && \
+	  xcrun stapler staple "$(APP)" && rm -f "$(ZIP)" && \
+	  spctl --assess --type execute --verbose "$(APP)"; fi
+	ditto -c -k --keepParent "$(APP)" "$(ZIP)"
+	@echo "built $(ZIP)"
 
 clean:
 	rm -rf $(BUILD)
 
-.PHONY: all clean check app
+.PHONY: all clean check app dist
 
 # keep the rewritten sources (for reading compiler errors and debugging)
 .SECONDARY: $(patsubst src/game/%.c,$(BUILD)/nat/%.c,$(PORTED_SRC)) $(patsubst src/game/%.c,$(BUILD)/chk/%.c,$(PORTED_SRC))
