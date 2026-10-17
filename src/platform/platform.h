@@ -10,7 +10,7 @@ void platform_set_display_mode(int m);
 
 /* input.c: key remapping and game controllers */
 enum { ACT_UP, ACT_DOWN, ACT_LEFT, ACT_RIGHT, ACT_BUTTON1, ACT_BUTTON2, ACT_PAUSE, ACT_TIME, ACT_REWIND,
-       ACT_QSAVE, ACT_QLOAD, ACT_COUNT };
+       ACT_QSAVE, ACT_QLOAD, ACT_ADDTIME, ACT_ADDHEALTH, ACT_COUNT };
 const char *input_action_name(int a);
 int  input_action_key(int a);            /* Mac key code chosen for the action, -1 = none */
 int  input_action_default_key(int a);

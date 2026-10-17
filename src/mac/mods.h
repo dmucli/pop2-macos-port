@@ -6,6 +6,8 @@ int  mods_get(int m);
 void mods_set(int m, int v);
 void mods_next_level(void);
 void mods_goto_level(int level);   /* 1-14 */
+void mods_add_time(void);          /* 5 more minutes */
+void mods_add_health(void);        /* one more life point (a flask when full) */
 int  mods_current_level(void);    /* 0 when not playing */
 void mods_tick(void);
 void mods_frame(void);

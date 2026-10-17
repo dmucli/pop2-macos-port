@@ -67,6 +67,8 @@ static int game_items(maddr h, GameItem *out, int max) {
 - (void)toggleMod:(NSMenuItem *)item { mods_set((int)item.tag, !mods_get((int)item.tag)); platform_menu_sync(); }
 - (void)gotoLevel:(NSMenuItem *)item { mods_goto_level((int)item.tag); }
 - (void)nextLevel:(id)sender { (void)sender; mods_next_level(); platform_menu_sync(); }
+- (void)addTime:(id)sender { (void)sender; mods_add_time(); }
+- (void)addHealth:(id)sender { (void)sender; mods_add_health(); }
 - (void)quickSave:(id)sender { (void)sender; mods_quick_save(); }
 - (void)quickLoad:(id)sender { (void)sender; mods_quick_load(); }
 - (void)saveStates:(id)sender { (void)sender; states_window(); }
@@ -180,6 +182,8 @@ void platform_menu_update(void) {
         }
         NSMenuItem *lvi = [ex addItemWithTitle:@"Go to Level" action:NULL keyEquivalent:@""];
         lvi.submenu = lv;
+        add(ex, @"Add 5 Minutes", @selector(addTime:), nil, 1);
+        add(ex, @"Add One Health", @selector(addHealth:), nil, 1);
         [ex addItem:[NSMenuItem separatorItem]];
         NSMenuItem *qs = add(ex, [NSString stringWithFormat:@"Quick Save (%s)", input_key_name(input_action_key(ACT_QSAVE))],
                              @selector(quickSave:), @"s", 1);

@@ -28,6 +28,8 @@ static const Action acts[ACT_COUNT] = {
     { "Rewind (hold)",               "Keys.Rewind",  "Pad.Rewind",  -1, 0, 0x33, SDL_CONTROLLER_BUTTON_LEFTSHOULDER },
     { "Quick save",                  "Keys.QuickSave", "Pad.QuickSave", -1, 0, 0x60, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER },
     { "Quick load",                  "Keys.QuickLoad", "Pad.QuickLoad", -1, 0, 0x65, SDL_CONTROLLER_BUTTON_Y },
+    { "Add 5 minutes",               "Keys.AddTime", "Pad.AddTime", -1, 0, -1, -1 },
+    { "Add one health",              "Keys.AddHealth", "Pad.AddHealth", -1, 0, -1, -1 },
 };
 static int key_for[ACT_COUNT], pad_for[ACT_COUNT];
 
@@ -75,13 +77,15 @@ const char *input_key_name(int k) {
 }
 
 /* Extras that only make sense during play: elsewhere their key keeps its normal use. */
-static int play_only(int a) { return a == ACT_REWIND || a == ACT_QSAVE; }
+static int play_only(int a) { return a == ACT_REWIND || a == ACT_QSAVE || a == ACT_ADDTIME || a == ACT_ADDHEALTH; }
 
 static void press(int a, int down, uint16_t mods, int repeat) {
     switch (a) {
         case ACT_REWIND: mods_set_rewind_held(down); return;
         case ACT_QSAVE: if (down && !repeat && mods_playing()) mods_quick_save(); return;
         case ACT_QLOAD: if (down && !repeat) mods_quick_load(); return;   /* from the title too */
+        case ACT_ADDTIME: if (down && !repeat && mods_playing()) mods_add_time(); return;
+        case ACT_ADDHEALTH: if (down && !repeat && mods_playing()) mods_add_health(); return;
     }
     event_key(down, (uint8_t)acts[a].key, acts[a].ch, mods, repeat);
 }
@@ -190,7 +194,8 @@ static int pad_track(const SDL_Event *e) {
 
 /* ---- Recalbox conventions (POP2_HOTKEYS=1): Hotkey (Select, or the pad's hotkey button,
  * which SDL reports as Guide) with Start quits, with Y saves a state, with X loads the
- * newest, with Left rewinds while held; Select alone keeps its action (show time left).
+ * newest, with Left rewinds while held, with Up adds one health, with Right adds 5
+ * minutes; Select alone keeps its action (show time left).
  * While a dialog waits for an answer, A or Start is Return and B is Esc. ---- */
 int  wm_modal_active(void);
 static int hotkeys = -1, hk_held, hk_combo;
@@ -206,6 +211,8 @@ static void hotkey_combo(int b, int down) {
         case SDL_CONTROLLER_BUTTON_Y: if (down) press(ACT_QSAVE, 1, 0, 0); break;
         case SDL_CONTROLLER_BUTTON_X: if (down) press(ACT_QLOAD, 1, 0, 0); break;
         case SDL_CONTROLLER_BUTTON_DPAD_LEFT: if (mods_playing() || !down) press(ACT_REWIND, down, 0, 0); break;
+        case SDL_CONTROLLER_BUTTON_DPAD_UP: if (down) press(ACT_ADDHEALTH, 1, 0, 0); break;
+        case SDL_CONTROLLER_BUTTON_DPAD_RIGHT: if (down) press(ACT_ADDTIME, 1, 0, 0); break;
     }
 }
 

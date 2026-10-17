@@ -83,12 +83,43 @@ void mods_next_level(void) {
 #define G_NEXT_LEVEL     A5(-0x4f92)    /* word: the level to go to (== level while playing it) */
 uint32_t nat_ResetSoundItem(int16_t p4);
 static int want_level, in_level;   /* in_level: a level's frame loop is running */
+static int want_time, want_health;
 static void selftest_title_load(void);
 void mods_goto_level(int level) {
     if (!mods_playing() || level < 1 || level > 14) { macos_beep(); return; }
     want_level = level;
 }
 int mods_current_level(void) { return mods_playing() ? (int16_t)rd16(G_LEVEL) : 0; }
+
+/* Add time / health: applied at the start of a frame. Time as the game's own '+' cheat key
+ * (which adds one minute) and shows the time left; health: one life point, or one more
+ * flask when the meter is full (12 at most, the game's own limit). */
+#define G_MSG_ID         A5(-0x4fcc)    /* word: message being displayed */
+#define G_MSG_TIMER      A5(-0x4fca)    /* word */
+#define G_SHOW_TIME      A5(-0x4fa2)    /* word: request to display the time left */
+#define ADD_MINUTES      5
+#define MAX_LIFE         12
+void mods_add_time(void) { if (mods_playing()) want_time++; else macos_beep(); }
+void mods_add_health(void) { if (mods_playing()) want_health++; else macos_beep(); }
+static void apply_add_time(void) {
+    int m = (int16_t)rd16(G_MINUTES_LEFT) + ADD_MINUTES * want_time;
+    want_time = 0;
+    if (m > 99) m = 99;
+    wr16(G_MINUTES_LEFT, (uint16_t)m);
+    if (saved_minutes >= 0) saved_minutes = m;
+    wr16(G_MSG_ID, 0); wr16(G_MSG_TIMER, 0); wr16(G_SHOW_TIME, 1);
+}
+static void apply_add_health(void) {
+    maddr kid = G_KID, cur = G_CUR_CHAR;
+    for (; want_health > 0; want_health--) {
+        int16_t life = (int16_t)rd16(kid + CH_LIFE), max = (int16_t)rd16(kid + CH_MAXLIFE);
+        if (life <= 0) break;                                  /* not for a dead kid */
+        if (life >= max && max < MAX_LIFE) wr16(kid + CH_MAXLIFE, (uint16_t)++max);
+        if (life < max) wr16(kid + CH_LIFE, (uint16_t)(life + 1));
+        if (rd16(cur) == rd16(kid)) { wr16(cur + CH_MAXLIFE, rd16(kid + CH_MAXLIFE)); wr16(cur + CH_LIFE, rd16(kid + CH_LIFE)); }
+    }
+    want_health = 0;
+}
 
 /* ---- copy protection ----
  * CopyProtectionDialog asks only while its "passed" flag is clear (and sets it itself);
@@ -247,7 +278,7 @@ void mods_level_start(void) {
 int mods_playing(void) { return active() && in_level && rd16(G_DEMO) == 0; }
 int mods_in_level(void) { return active() && in_level; }
 void mods_level_end(void) {
-    in_level = 0; want_level = 0;
+    in_level = 0; want_level = 0; want_time = want_health = 0;
     if (!runtime_deterministic) fprintf(stderr, "[game] level %d ends, next %d\n", (int16_t)rd16(G_LEVEL), (int16_t)rd16(G_NEXT_LEVEL));
 }
 
@@ -305,6 +336,14 @@ void mods_frame(void) {
             goto selftest_done;
         }
         char t = *getenv("POP2_MODS_SELFTEST");
+        if (t == '7') {   /* add time and health */
+            if (frame_no == 30 || frame_no == 32 || frame_no == 60 || frame_no == 62)
+                fprintf(stderr, "[mods] frame %d: minutes %d, life %d/%d\n", frame_no, (int16_t)rd16(G_MINUTES_LEFT),
+                        (int16_t)rd16(G_KID + CH_LIFE), (int16_t)rd16(G_KID + CH_MAXLIFE));
+            if (frame_no == 31) mods_add_time();
+            if (frame_no == 61) { mods_add_health(); mods_add_health(); mods_add_health(); }
+            goto selftest_done;
+        }
         if (t == '4' || t == '5' || t == '6') {   /* save states across levels (4) and across runs (5: loads the newest) */
             static int lv_frames, phase, saved_level;
             lv_frames++;
@@ -345,6 +384,8 @@ void mods_frame(void) {
         if (frame_no % 50 == 0) fprintf(stderr, "[mods] frame %d level %d ring %d\n", frame_no, (int16_t)rd16(A5(-0x4fd2)), ring_count);
     }
     selftest_done:
+    if (want_time) apply_add_time();
+    if (want_health) apply_add_health();
     if (want_level) {
         int l = want_level; want_level = 0;
         if (rd16(G_NEXT_LEVEL) == rd16(G_LEVEL)) {   /* not already leaving the level */

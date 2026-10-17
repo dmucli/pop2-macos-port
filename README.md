@@ -42,6 +42,8 @@ Additions of this port, outside the original game (they are off in the verificat
 | Extras > Cheat Mode | the game's own debug mode (as when 1 2 3 are held at launch): `-`/`+` change the time, Command-L next level on any level; the letter keys no longer move |
 | Extras > Skip to Next Level (Option-Command-N) | turns on Cheat Mode and uses the game's Command-L |
 | Extras > Go to Level | jump to any level 1-14 while playing |
+| Extras > Add 5 Minutes | 5 more minutes on the clock (as the game's own `+` cheat key, which adds 1), shown at once |
+| Extras > Add One Health | one more life point; when the meter is full, one more flask (12 at most). Both can also get a key or a controller button in Extras > Controls |
 | F5 / F9 (Option-Command-S / -L) | save state / load the newest one (keys can be changed in Extras > Controls). A state can be loaded in any level, after a restart too, and from the title screen (a game is started first) |
 | Extras > Save States... | the last 10 save states with a picture, the level, the time left and the date; click a name to rename it; Load, Delete. They are kept in `~/Library/Application Support/PoP2-port/Save States` |
 | hold Delete | rewind (about 15 seconds; Extras > Rewind turns it off) |

@@ -13,6 +13,8 @@ Controls
   Hotkey + Y .............. save state (the last 10 are kept)
   Hotkey + X .............. load the newest save state (works from the title screen too)
   Hotkey + Left (hold) .... rewind
+  Hotkey + Up ............. add one health (a flask when the meter is full)
+  Hotkey + Right .......... add 5 minutes
   Hotkey + Start .......... quit
   In a dialog: A or Start = OK, B = Cancel
 
